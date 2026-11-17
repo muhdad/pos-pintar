@@ -41,7 +41,7 @@
                 <!-- Tambah Produk -->
                 <button type="button" 
                         @click="productModalOpen = true; recipes = []"
-                        class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs tracking-wide shadow-sm shadow-blue-500/25 transition flex items-center gap-1.5">
+                        class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs tracking-wide shadow-sm shadow-orange-500/20 transition flex items-center gap-1.5">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
@@ -75,8 +75,12 @@
                             <tr class="hover:bg-slate-50/70 transition-colors">
                                 <td class="py-4 px-6">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center font-bold text-base shrink-0">
-                                            ☕
+                                        <div class="w-11 h-11 rounded-xl bg-amber-50 border border-amber-200 overflow-hidden flex items-center justify-center font-bold text-base shrink-0 shadow-2xs">
+                                            @if ($product->image_url)
+                                                <img src="{{ asset($product->image_url) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
+                                            @else
+                                                <span class="text-lg">🍲</span>
+                                            @endif
                                         </div>
                                         <div>
                                             <h4 class="font-bold text-slate-900">{{ $product->name }}</h4>

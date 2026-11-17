@@ -409,13 +409,37 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($menuList as $m) {
-            $product = Product::firstOrCreate(
+            // Assign AI culinary image based on product type
+            $img = '/images/products/soto-ayam.jpg';
+            $nameLower = strtolower($m['name']);
+            if (str_contains($nameLower, 'soto daging')) {
+                $img = '/images/products/soto-daging.jpg';
+            } elseif (str_contains($nameLower, 'soto')) {
+                $img = '/images/products/soto-ayam.jpg';
+            } elseif (str_contains($nameLower, 'mie')) {
+                $img = '/images/products/mie-ayam.jpg';
+            } elseif (str_contains($nameLower, 'bakso')) {
+                $img = '/images/products/bakso.jpg';
+            } elseif (str_contains($nameLower, 'ceker')) {
+                $img = '/images/products/ceker.jpg';
+            } elseif (str_contains($nameLower, 'jeruk')) {
+                $img = '/images/products/es-jeruk.jpg';
+            } elseif (str_contains($nameLower, 'teh')) {
+                $img = '/images/products/es-teh.jpg';
+            } elseif ($m['category_id'] === $catTambahan->id) {
+                $img = '/images/products/lauk.jpg';
+            } elseif ($m['category_id'] === $catMinuman->id) {
+                $img = '/images/products/es-teh.jpg';
+            }
+
+            $product = Product::updateOrCreate(
                 ['tenant_id' => $tenant->id, 'name' => $m['name']],
                 [
                     'category_id'   => $m['category_id'],
                     'sku'           => $m['sku'],
                     'selling_price' => $m['selling_price'],
                     'cogs'          => $m['cogs'],
+                    'image_url'     => $img,
                     'is_active'     => true,
                 ]
             );
