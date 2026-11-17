@@ -117,15 +117,15 @@
                     </template>
                 </div>
 
-                <!-- SLL Product Cards Grid (Bright White Cards, High Contrast) -->
-                <div class="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 pr-1">
+                <!-- SLL Product Cards Grid (Proper Sizing, Never Squished) -->
+                <div class="flex-1 overflow-y-auto min-h-0 content-start auto-rows-max grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 p-1 pb-10">
                     <template x-for="product in filteredProducts" :key="product.id">
                         <div @click="addToCart(product)"
-                             class="bg-white hover:bg-[#fffdfa] border border-stone-200/90 hover:border-amber-400 rounded-2xl p-3.5 flex flex-col justify-between shadow-2xs hover:shadow-md cursor-pointer transition active:scale-95 group relative overflow-hidden">
+                             class="bg-white hover:bg-[#fffdfa] border border-stone-200 hover:border-amber-400 rounded-2xl p-3.5 flex flex-col justify-between shadow-2xs hover:shadow-md cursor-pointer transition-all duration-150 active:scale-95 group min-h-[240px]">
                             
                             <div>
-                                <!-- Thumbnail Box (Soft Warm Cream Gradient) -->
-                                <div class="w-full h-24 rounded-xl bg-gradient-to-tr from-amber-50 via-orange-50/50 to-stone-50 border border-amber-100 flex flex-col items-center justify-center mb-2.5 overflow-hidden group-hover:scale-[1.02] transition">
+                                <!-- Thumbnail Box (Proper 128px Height, Crisp Aspect Ratio) -->
+                                <div class="w-full h-32 rounded-xl bg-gradient-to-tr from-amber-50 via-orange-50/50 to-stone-50 border border-amber-100 flex flex-col items-center justify-center mb-3 overflow-hidden shrink-0 group-hover:scale-[1.02] transition">
                                     <template x-if="product.image_url">
                                         <img :src="product.image_url" class="w-full h-full object-cover">
                                     </template>
@@ -142,15 +142,15 @@
                                     </template>
                                 </div>
 
-                                <h3 class="text-xs font-black text-stone-900 group-hover:text-amber-800 line-clamp-2 leading-snug" x-text="product.name"></h3>
+                                <h3 class="text-xs sm:text-sm font-extrabold text-stone-900 group-hover:text-amber-800 line-clamp-2 leading-snug" x-text="product.name"></h3>
                                 <span class="text-[10px] text-stone-400 font-mono mt-0.5 block" x-text="product.sku || 'Menu SLL'"></span>
                             </div>
 
                             <div class="mt-3 pt-2.5 border-t border-stone-100 flex items-center justify-between">
-                                <span class="text-sm font-black text-amber-700 font-mono">
+                                <span class="text-sm sm:text-base font-black text-amber-700 font-mono">
                                     Rp<span x-text="Number(product.selling_price).toLocaleString('id-ID')"></span>
                                 </span>
-                                <span class="w-7 h-7 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center text-sm font-black shadow-xs shadow-orange-500/25 group-hover:scale-110 transition">
+                                <span class="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center text-sm font-black shadow-xs shadow-orange-500/25 group-hover:scale-110 transition shrink-0">
                                     +
                                 </span>
                             </div>

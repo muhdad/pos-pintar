@@ -9,7 +9,7 @@
                 <p class="text-xs text-slate-500 mt-0.5">Daftar rekonsiliasi seluruh transaksi kasir online dan offline yang telah tersinkronisasi.</p>
             </div>
             <div class="flex items-center gap-2">
-                <a href="{{ route('pos.index') }}" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs tracking-wide shadow-md shadow-blue-500/20 transition flex items-center gap-1.5">
+                <a href="{{ route('pos.index') }}" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs tracking-wide shadow-sm shadow-orange-500/20 transition flex items-center gap-1.5">
                     <span>+ Transaksi Baru</span>
                 </a>
             </div>
