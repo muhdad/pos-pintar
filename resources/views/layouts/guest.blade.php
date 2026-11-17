@@ -21,15 +21,15 @@
 
     <!-- Brand Logo Header -->
     <div class="mb-6 text-center relative z-10">
-        <a href="/" class="inline-flex flex-col items-center gap-3 group">
-            <div class="w-16 h-16 rounded-3xl bg-gradient-to-br from-amber-400 via-orange-500 to-amber-600 text-white flex items-center justify-center font-black text-3xl shadow-xl shadow-orange-500/20 border-2 border-amber-300/60 group-hover:scale-105 transition transform">
+        <div class="inline-flex flex-col items-center gap-3">
+            <div class="w-16 h-16 rounded-3xl bg-gradient-to-br from-amber-400 via-orange-500 to-amber-600 text-white flex items-center justify-center font-black text-3xl shadow-xl shadow-orange-500/20 border-2 border-amber-300/60 transition transform">
                 <span class="tracking-tighter drop-shadow-xs font-black">SLL</span>
             </div>
             <div>
                 <h1 class="text-2xl font-black text-stone-900 tracking-tight">SOTO LAMONGAN LESTARI</h1>
-                <p class="text-xs text-amber-700 font-bold tracking-wide mt-0.5">Pusat Kuliner Lamongan • Pesanan: +62 852-1325-4219</p>
+                <p class="text-xs text-amber-800 font-bold tracking-wide mt-0.5">Pusat Kuliner Lamongan • Pesanan: +62 852-1325-4219</p>
             </div>
-        </a>
+        </div>
     </div>
 
     <!-- Auth Card Surface (Crisp Clean White Card) -->
@@ -37,11 +37,11 @@
         {{ $slot }}
     </div>
 
-    <!-- Simple Back link -->
+    <!-- Production Footer -->
     <div class="mt-6 text-center relative z-10">
-        <a href="/" class="text-xs font-semibold text-stone-500 hover:text-amber-700 transition flex items-center gap-1 justify-center">
-            <span>← Kembali ke Halaman Utama</span>
-        </a>
+        <p class="text-[11px] font-medium text-stone-500">
+            &copy; {{ date('Y') }} Soto Lamongan Lestari (SLL) • Smart Cloud POS
+        </p>
     </div>
 </body>
 </html>

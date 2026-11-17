@@ -6,9 +6,12 @@ use App\Http\Controllers\Pos\PosTerminalController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
-// Landing Page
+// Root Route: Direct to Login or Dashboard (Production Ready - No Landing Page)
 Route::get('/', function () {
-    return view('welcome');
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+    return redirect()->route('login');
 });
 
 // Backoffice Routes (Protected by Auth)
