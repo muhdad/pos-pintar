@@ -20,20 +20,21 @@ class PosTerminalController extends Controller
     {
         $user = $request->user();
 
-        // Gunakan tenant pengguna atau tenant pertama (Kopi Senja)
+        // Gunakan tenant pengguna atau tenant pertama (SLL)
         $tenant = $user?->tenant ?? Tenant::first() ?? Tenant::create([
-            'name' => 'Kopi Senja Nusantara',
-            'slug' => 'kopi-senja',
-            'owner_phone' => '081299887766',
+            'name' => 'Soto Lamongan Lestari (SLL)',
+            'slug' => 'sll-lestari',
+            'owner_phone' => '+62 852-1325-4219',
             'plan_tier' => 'PRO_BUNDLE',
             'is_active' => true,
         ]);
 
         $outlet = $tenant->outlets()->first() ?? Outlet::firstOrCreate(
-            ['tenant_id' => $tenant->id, 'name' => 'Cabang Kemang'],
+            ['tenant_id' => $tenant->id, 'name' => 'SLL Cabang Utama'],
             [
-                'type' => 'STORE',
-                'address' => 'Jl. Kemang Raya No. 45, Jakarta Selatan',
+                'type' => 'RESTO',
+                'address' => 'Jl. Raya Lamongan No. 12',
+                'phone' => '+62 852-1325-4219',
             ]
         );
 
