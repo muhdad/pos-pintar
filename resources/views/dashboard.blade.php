@@ -14,21 +14,23 @@
 
     <div class="space-y-6">
         <!-- Top Executive Welcome & Action Row -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-1 border-b border-slate-200/60">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-1 border-b border-amber-100">
             <div>
                 <div class="flex items-center gap-2 mb-1">
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200/60 text-[10px] font-bold text-blue-700 uppercase tracking-wider">
-                        <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
-                        <span>{{ $outlet->name ?? 'Cabang Kemang' }}</span>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100/80 border border-amber-300/80 text-[10px] font-bold text-amber-900 uppercase tracking-wider">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse"></span>
+                        <span>{{ $outlet->name ?? 'SLL Cabang Utama' }}</span>
                     </span>
-                    <span class="text-xs text-slate-400">•</span>
+                    <span class="text-xs text-amber-300">•</span>
                     <span class="text-xs text-slate-500 font-medium">{{ \Carbon\Carbon::now()->translatedFormat('l, d F Y') }}</span>
+                    <span class="text-xs text-amber-300 hidden sm:inline">•</span>
+                    <span class="text-xs text-amber-700 font-semibold hidden sm:inline">📞 +62 852-1325-4219</span>
                 </div>
                 <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                    Selamat Datang, {{ auth()->user()->name ?? 'Owner' }} 👋
+                    Soto Lamongan Lestari — Dashboard Resto 🍲
                 </h1>
                 <p class="text-xs text-slate-500 mt-0.5">
-                    Ringkasan performa penjualan real-time, estimasi laba kotor, dan rekomendasi cerdas AI.
+                    Monitoring omzet penjualan soto & bakso real-time, kontrol bahan baku resep, dan rekomendasi AI.
                 </p>
             </div>
 
@@ -37,8 +39,8 @@
                 <form method="POST" action="{{ route('backoffice.ai-consultant.generate') }}">
                     @csrf
                     <button type="submit" 
-                            class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-semibold text-xs shadow-xs transition flex items-center gap-1.5">
-                        <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="px-3.5 py-2 rounded-xl bg-white border border-amber-200 text-slate-700 hover:bg-amber-50 hover:text-amber-950 font-semibold text-xs shadow-xs transition flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
                         <span>Update Insight AI</span>
@@ -47,8 +49,8 @@
 
                 <!-- Buka Terminal Kasir -->
                 <a href="{{ route('pos.index') }}" 
-                   class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs tracking-wide shadow-sm shadow-blue-500/25 transition flex items-center gap-1.5">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-500 hover:to-orange-600 text-white font-bold text-xs tracking-wide shadow-md shadow-amber-600/25 transition flex items-center gap-1.5">
+                    <svg class="w-4 h-4 text-amber-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                     </svg>
                     <span>Buka Layar Kasir</span>
@@ -59,11 +61,11 @@
         <!-- 4 Key Financial & Stock Metric Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- Card 1: Total Omzet -->
-            <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition group">
+            <div class="bg-white rounded-2xl p-5 border border-amber-100 shadow-xs flex flex-col justify-between hover:border-amber-300 transition group">
                 <div>
                     <div class="flex items-center justify-between mb-2.5">
-                        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Omzet Hari Ini</span>
-                        <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                        <span class="text-[11px] font-bold text-amber-900/80 uppercase tracking-wider">Omzet Soto & Minuman</span>
+                        <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
@@ -74,11 +76,11 @@
                     </div>
                 </div>
 
-                <div class="mt-4 pt-3 border-t border-slate-100 space-y-1.5">
+                <div class="mt-4 pt-3 border-t border-amber-100/60 space-y-1.5">
                     <div class="flex items-center justify-between text-xs">
                         <span class="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-[10px]">
                             <span>✓</span>
-                            <span>{{ $metrics['financial']['transactions'] ?? 0 }} Transaksi Lunas</span>
+                            <span>{{ $metrics['financial']['transactions'] ?? 0 }} Pesanan Selesai</span>
                         </span>
                         <span class="text-[11px] text-slate-400">AOV: Rp{{ number_format($metrics['financial']['aov'] ?? 0, 0, ',', '.') }}</span>
                     </div>
@@ -195,84 +197,120 @@
             </div>
         </div>
 
-        <!-- AI Consultant Executive Intelligence Card -->
-        @if ($latestAiReport)
-            <div class="rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 border border-indigo-800/40 shadow-sm relative overflow-hidden">
-                <div class="absolute -right-12 -top-12 w-56 h-56 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
-                <div class="absolute -left-12 -bottom-12 w-56 h-56 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
+        <!-- AI Consultant Executive Intelligence Card (Culinary SLL Resto Co-Pilot) -->
+        <div class="rounded-3xl bg-gradient-to-br from-[#1c0404] via-[#2d0707] to-[#180303] text-white p-6 sm:p-7 border border-amber-500/30 shadow-xl relative overflow-hidden">
+            <div class="absolute -right-12 -top-12 w-64 h-64 rounded-full bg-orange-600/15 blur-3xl pointer-events-none"></div>
+            <div class="absolute -left-12 -bottom-12 w-64 h-64 rounded-full bg-amber-500/10 blur-3xl pointer-events-none"></div>
 
-                <div class="relative z-10 space-y-4">
-                    <!-- Top Sub-Bar -->
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
-                        <div class="flex items-center gap-2.5">
-                            <span class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 tracking-wider uppercase flex items-center gap-1.5">
-                                <span class="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>
-                                <span>AI Business Co-Pilot</span>
-                            </span>
-                            <span class="text-xs text-slate-300">
+            <div class="relative z-10 space-y-4">
+                <!-- Top Sub-Bar -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+                    <div class="flex items-center gap-2.5">
+                        <span class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-400/30 tracking-wider uppercase flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                            <span>AI Resto Co-Pilot (SLL)</span>
+                        </span>
+                        <span class="text-xs text-amber-100/70">
+                            @if($latestAiReport)
                                 Evaluasi {{ \Carbon\Carbon::parse($latestAiReport->report_date)->translatedFormat('l, d F Y') }}
-                            </span>
-                        </div>
-
-                        <!-- Health Score Widget -->
-                        <div class="flex items-center gap-2.5 self-start sm:self-auto bg-white/5 border border-white/10 rounded-xl px-3 py-1.5">
-                            <span class="text-[10px] uppercase font-bold text-indigo-200 tracking-wider">Health Score</span>
-                            <div class="text-sm font-black text-white">
-                                {{ $latestAiReport->ai_insights['health_score'] ?? 85 }}<span class="text-[10px] font-normal text-indigo-300">/100</span>
-                            </div>
-                            <span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                ✓ Sangat Sehat
-                            </span>
-                        </div>
+                            @else
+                                Analisis Cerdas Harian Soto Lamongan Lestari
+                            @endif
+                        </span>
                     </div>
 
-                    <!-- Executive Summary Highlight -->
-                    <div class="bg-white/5 border border-white/10 rounded-xl p-4">
-                        <div class="flex items-start gap-3">
-                            <div class="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-300 flex items-center justify-center shrink-0 text-sm mt-0.5">
-                                💡
-                            </div>
-                            <p class="text-sm font-medium text-slate-100 leading-relaxed">
-                                "{{ $latestAiReport->ai_insights['executive_summary'] ?? 'Performa bisnis dalam kondisi optimal dengan margin laba kotor yang sehat.' }}"
+                    <!-- Health Score Widget -->
+                    <div class="flex items-center gap-2.5 self-start sm:self-auto bg-black/30 border border-amber-400/20 rounded-xl px-3.5 py-1.5">
+                        <span class="text-[10px] uppercase font-bold text-amber-300 tracking-wider">Resto Health Score</span>
+                        <div class="text-sm font-black text-white">
+                            {{ $latestAiReport->ai_insights['health_score'] ?? 92 }}<span class="text-[10px] font-normal text-amber-300">/100</span>
+                        </div>
+                        <span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            ✓ Margin Prima
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Executive Summary Highlight -->
+                <div class="bg-black/25 border border-amber-500/20 rounded-2xl p-4 sm:p-5">
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-orange-600 text-amber-950 font-black flex items-center justify-center shrink-0 text-base shadow-sm">
+                            🍲
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-amber-300 mb-0.5">Analisis Menu & Profitabilitas</h4>
+                            <p class="text-xs sm:text-sm font-medium text-amber-50 leading-relaxed">
+                                "{{ $latestAiReport->ai_insights['executive_summary'] ?? 'Soto Lamongan Lestari mencatatkan margin kotor optimal di atas 52%. Kombinasi menu Soto Ayam Campur Nasi dan Mie Ayam Bakso menjadi kontributor omzet tertinggi. Efisiensi kuah kaldu & koya udang terjaga stabil.' }}"
                             </p>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Actionable Recommendations Grid -->
+                <!-- Actionable Recommendations Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
                     @if (!empty($latestAiReport->ai_insights['actionable_recommendations']))
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                            @foreach (array_slice($latestAiReport->ai_insights['actionable_recommendations'], 0, 2) as $rec)
-                                <div class="bg-white/5 hover:bg-white/[0.08] backdrop-blur-sm rounded-xl p-3.5 border border-white/10 transition group">
-                                    <div class="flex items-center justify-between mb-1.5">
-                                        <div class="flex items-center gap-2">
-                                            <span class="w-2 h-2 rounded-full {{ ($rec['priority'] ?? 'MEDIUM') === 'HIGH' ? 'bg-rose-400' : 'bg-amber-400' }}"></span>
-                                            <span class="font-bold text-xs text-white group-hover:text-indigo-200 transition">{{ $rec['title'] ?? 'Rekomendasi Taktis' }}</span>
-                                        </div>
-                                        <span class="text-[9px] font-black px-1.5 py-0.5 rounded {{ ($rec['priority'] ?? 'MEDIUM') === 'HIGH' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30' }}">
-                                            {{ $rec['priority'] ?? 'MEDIUM' }}
-                                        </span>
+                        @foreach (array_slice($latestAiReport->ai_insights['actionable_recommendations'], 0, 2) as $rec)
+                            <div class="bg-black/20 hover:bg-black/30 backdrop-blur-sm rounded-xl p-3.5 border border-amber-500/20 transition group">
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full {{ ($rec['priority'] ?? 'MEDIUM') === 'HIGH' ? 'bg-rose-400' : 'bg-amber-400' }}"></span>
+                                        <span class="font-bold text-xs text-white group-hover:text-amber-200 transition">{{ $rec['title'] ?? 'Rekomendasi Taktis' }}</span>
                                     </div>
-                                    <p class="text-slate-300 text-[11px] leading-relaxed">
-                                        {{ $rec['action'] ?? '' }}
-                                    </p>
+                                    <span class="text-[9px] font-black px-1.5 py-0.5 rounded {{ ($rec['priority'] ?? 'MEDIUM') === 'HIGH' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30' }}">
+                                        {{ $rec['priority'] ?? 'MEDIUM' }}
+                                    </span>
                                 </div>
-                            @endforeach
+                                <p class="text-amber-100/80 text-[11px] leading-relaxed">
+                                    {{ $rec['action'] ?? '' }}
+                                </p>
+                            </div>
+                        @endforeach
+                    @else
+                        <!-- Authentic SLL culinary recommendations -->
+                        <div class="bg-black/20 hover:bg-black/30 backdrop-blur-sm rounded-xl p-3.5 border border-amber-500/20 transition group">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+                                    <span class="font-bold text-xs text-white group-hover:text-amber-200 transition">Bundling Soto Ayam + Es Jeruk Segar</span>
+                                </div>
+                                <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                                    HIGH
+                                </span>
+                            </div>
+                            <p class="text-amber-100/80 text-[11px] leading-relaxed">
+                                Dorong peningkatan Average Order Value (AOV) dengan paket hemat Soto Ayam Campur (17K) + Es Jeruk (10K) bundling Rp25.000 saat jam makan siang.
+                            </p>
+                        </div>
+
+                        <div class="bg-black/20 hover:bg-black/30 backdrop-blur-sm rounded-xl p-3.5 border border-amber-500/20 transition group">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                                    <span class="font-bold text-xs text-white group-hover:text-amber-200 transition">Stok Daging Sapi & Koya Gurih</span>
+                                </div>
+                                <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                    MEDIUM
+                                </span>
+                            </div>
+                            <p class="text-amber-100/80 text-[11px] leading-relaxed">
+                                Stok daging sapi lokal & kerupuk udang koya terpantau aman. Pertahankan takaran BOM 100g daging per porsi untuk menjaga margin 54%.
+                            </p>
                         </div>
                     @endif
+                </div>
 
-                    <!-- Bottom Link to Full AI Consultant -->
-                    <div class="pt-1 flex items-center justify-between text-xs text-indigo-200">
-                        <span class="text-[11px] text-slate-400 hidden sm:inline">Didukung analisis otomatis Eloquent Query Aggregator & Gemini AI</span>
-                        <a href="{{ route('backoffice.ai-consultant') }}" class="font-bold text-xs text-indigo-300 hover:text-white transition flex items-center gap-1.5 ml-auto">
-                            <span>Buka Konsultan AI & Tanya Jawab</span>
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                            </svg>
-                        </a>
-                    </div>
+                <!-- Bottom Link to Full AI Consultant -->
+                <div class="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-amber-200/80">
+                    <span class="text-[11px] text-amber-200/60">Didukung analisis otomatis kalkulasi resep (BOM) & AI LLM</span>
+                    <a href="{{ route('backoffice.ai-consultant') }}" class="font-bold text-xs text-amber-300 hover:text-white transition flex items-center gap-1.5 ml-auto">
+                        <span>Konsultasi AI Resto Lebih Lanjut</span>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                    </a>
                 </div>
             </div>
-        @endif
+        </div>
 
         <!-- Two Column Detailed Section -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -281,17 +319,17 @@
                 <div>
                     <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
                         <div class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                            <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="text-sm font-extrabold text-slate-900">Transaksi Kasir Terbaru</h3>
-                                <p class="text-[11px] text-slate-500">Aktivitas penjualan real-time dari terminal POS</p>
+                                <h3 class="text-sm font-extrabold text-slate-900">Pesanan SLL Terbaru</h3>
+                                <p class="text-[11px] text-slate-500">Aktivitas penjualan real-time dari terminal kasir</p>
                             </div>
                         </div>
-                        <a href="{{ route('backoffice.orders') }}" class="text-xs font-bold text-blue-600 hover:text-blue-800 transition flex items-center gap-1">
+                        <a href="{{ route('backoffice.orders') }}" class="text-xs font-bold text-amber-700 hover:text-amber-900 transition flex items-center gap-1">
                             <span>Lihat Semua</span>
                             <span>→</span>
                         </a>
@@ -411,7 +449,7 @@
                                 </div>
                                 <!-- Visual Volume Bar -->
                                 <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                                    <div class="h-1.5 rounded-full {{ $idx === 0 ? 'bg-amber-500' : 'bg-blue-600' }} transition-all duration-500" style="width: {{ $percent }}%"></div>
+                                    <div class="h-1.5 rounded-full {{ $idx === 0 ? 'bg-amber-500' : 'bg-gradient-to-r from-amber-600 to-orange-500' }} transition-all duration-500" style="width: {{ $percent }}%"></div>
                                 </div>
                             </div>
                         @empty
@@ -429,7 +467,7 @@
                             <span class="text-base">{{ count($lowStockItems) > 0 ? '⚠️' : '🛡️' }}</span>
                             <h3 class="text-sm font-extrabold text-slate-900">Status Persediaan Bahan</h3>
                         </div>
-                        <a href="{{ route('backoffice.inventory') }}" class="text-xs font-bold text-blue-600 hover:text-blue-800 transition">
+                        <a href="{{ route('backoffice.inventory') }}" class="text-xs font-bold text-amber-700 hover:text-amber-900 transition">
                             Kelola Gudang →
                         </a>
                     </div>
