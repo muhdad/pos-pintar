@@ -117,6 +117,35 @@ class BackofficeController extends Controller
     }
 
     /**
+     * Perbarui Kategori Produk.
+     */
+    public function updateCategory(Request $request, Category $category): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:100',
+            'icon' => 'nullable|string|max:50',
+        ]);
+
+        $category->update([
+            'name' => $validated['name'],
+            'icon' => $validated['icon'] ?? $category->icon ?? 'coffee',
+        ]);
+
+        return back()->with('status', "Kategori '{$category->name}' berhasil diperbarui!");
+    }
+
+    /**
+     * Hapus Kategori Produk.
+     */
+    public function destroyCategory(Category $category): RedirectResponse
+    {
+        $categoryName = $category->name;
+        $category->delete();
+
+        return back()->with('status', "Kategori '{$categoryName}' berhasil dihapus.");
+    }
+
+    /**
      * Tambah Menu Produk Baru Beserta Resep (BOM).
      */
     public function storeProduct(Request $request): RedirectResponse
@@ -129,6 +158,7 @@ class BackofficeController extends Controller
             'sku' => 'nullable|string|max:50',
             'selling_price' => 'required|numeric|min:0',
             'cogs' => 'nullable|numeric|min:0',
+            'image_url' => 'nullable|string|max:255',
             'recipes' => 'nullable|array',
             'recipes.*.raw_material_id' => 'required|exists:raw_materials,id',
             'recipes.*.quantity' => 'required|numeric|min:0.01',
@@ -142,6 +172,7 @@ class BackofficeController extends Controller
                 'name' => $validated['name'],
                 'selling_price' => $validated['selling_price'],
                 'cogs' => $validated['cogs'] ?? 0,
+                'image_url' => $validated['image_url'] ?? null,
                 'is_active' => true,
             ]);
 
@@ -170,15 +201,90 @@ class BackofficeController extends Controller
     }
 
     /**
-     * Hapus Menu Produk.
+     * Perbarui Menu Produk Beserta Resep (BOM).
+     */
+    public function updateProduct(Request $request, Product $product): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:150',
+            'category_id' => 'required|exists:categories,id',
+            'sku' => 'nullable|string|max:50',
+            'selling_price' => 'required|numeric|min:0',
+            'cogs' => 'nullable|numeric|min:0',
+            'image_url' => 'nullable|string|max:255',
+            'is_active' => 'nullable',
+            'recipes' => 'nullable|array',
+            'recipes.*.raw_material_id' => 'required|exists:raw_materials,id',
+            'recipes.*.quantity' => 'required|numeric|min:0.01',
+        ]);
+
+        DB::transaction(function () use ($product, $validated, $request) {
+            $product->update([
+                'category_id' => $validated['category_id'],
+                'sku' => !empty($validated['sku']) ? $validated['sku'] : $product->sku,
+                'name' => $validated['name'],
+                'selling_price' => $validated['selling_price'],
+                'cogs' => $validated['cogs'] ?? $product->cogs,
+                'image_url' => $validated['image_url'] ?? $product->image_url,
+                'is_active' => $request->boolean('is_active', true),
+            ]);
+
+            // Sync Resep
+            $product->recipes()->delete();
+
+            if (! empty($validated['recipes'])) {
+                $totalCalculatedCogs = 0;
+                foreach ($validated['recipes'] as $item) {
+                    Recipe::create([
+                        'product_id' => $product->id,
+                        'raw_material_id' => $item['raw_material_id'],
+                        'quantity' => $item['quantity'],
+                    ]);
+
+                    $rawMat = RawMaterial::find($item['raw_material_id']);
+                    if ($rawMat) {
+                        $totalCalculatedCogs += ($rawMat->average_cost * $item['quantity']);
+                    }
+                }
+
+                if (empty($validated['cogs']) && $totalCalculatedCogs > 0) {
+                    $product->update(['cogs' => $totalCalculatedCogs]);
+                }
+            }
+        });
+
+        return back()->with('status', "Data produk '{$product->name}' berhasil diperbarui!");
+    }
+
+    /**
+     * Toggle status aktif/nonaktif produk.
+     */
+    public function toggleProduct(Request $request, Product $product): RedirectResponse
+    {
+        $product->update(['is_active' => ! $product->is_active]);
+        $statusStr = $product->is_active ? 'diaktifkan' : 'dinonaktifkan';
+
+        return back()->with('status', "Produk '{$product->name}' berhasil {$statusStr}.");
+    }
+
+    /**
+     * Hapus Menu Produk secara Aman.
      */
     public function destroyProduct(Product $product): RedirectResponse
     {
         $productName = $product->name;
+
+        // Cek jika produk pernah ada di riwayat pesanan (foreign key restrict)
+        $hasOrders = DB::table('order_items')->where('product_id', $product->id)->exists();
+        if ($hasOrders) {
+            $product->update(['is_active' => false]);
+            return back()->with('status', "Produk '{$productName}' dinonaktifkan dari katalog (tidak dihapus permanen karena ada riwayat transaksi).");
+        }
+
         $product->recipes()->delete();
         $product->delete();
 
-        return back()->with('status', "Produk {$productName} berhasil dihapus.");
+        return back()->with('status', "Produk '{$productName}' berhasil dihapus.");
     }
 
     /**
@@ -251,6 +357,78 @@ class BackofficeController extends Controller
         });
 
         return back()->with('status', "Bahan baku '{$validated['name']}' berhasil didaftarkan ke gudang!");
+    }
+
+    /**
+     * Perbarui Data Bahan Baku & Koreksi Stok.
+     */
+    public function updateRawMaterial(Request $request, RawMaterial $rawMaterial): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:150',
+            'unit' => 'required|string|max:20',
+            'average_cost' => 'required|numeric|min:0',
+            'minimum_stock' => 'required|numeric|min:0',
+            'current_stock' => 'nullable|numeric|min:0',
+        ]);
+
+        DB::transaction(function () use ($rawMaterial, $validated, $request) {
+            $rawMaterial->update([
+                'name' => $validated['name'],
+                'unit' => $validated['unit'],
+                'average_cost' => $validated['average_cost'],
+                'minimum_stock' => $validated['minimum_stock'],
+            ]);
+
+            // Jika ada koreksi stok riil
+            if ($request->filled('current_stock')) {
+                $tenant = $request->user()?->tenant ?? Tenant::first();
+                $outlet = $tenant?->outlets()->first() ?? Outlet::first();
+
+                $stock = OutletStock::firstOrCreate(
+                    ['outlet_id' => $outlet->id, 'raw_material_id' => $rawMaterial->id],
+                    ['current_stock' => 0]
+                );
+
+                $newStock = (float) $validated['current_stock'];
+                $diff = $newStock - (float) $stock->current_stock;
+
+                if (abs($diff) > 0.0001) {
+                    $stock->update(['current_stock' => $newStock]);
+
+                    StockMovement::create([
+                        'outlet_stock_id' => $stock->id,
+                        'type' => 'OPNAME_ADJUSTMENT',
+                        'quantity_delta' => $diff,
+                        'balance_after' => $newStock,
+                        'notes' => 'Koreksi stok opname manual',
+                    ]);
+                }
+            }
+        });
+
+        return back()->with('status', "Bahan baku '{$rawMaterial->name}' berhasil diperbarui!");
+    }
+
+    /**
+     * Hapus Bahan Baku dari Gudang.
+     */
+    public function destroyRawMaterial(RawMaterial $rawMaterial): RedirectResponse
+    {
+        $name = $rawMaterial->name;
+
+        // Cek jika bahan baku sedang digunakan dalam resep menu
+        $usedInRecipes = Recipe::where('raw_material_id', $rawMaterial->id)->count();
+        if ($usedInRecipes > 0) {
+            return back()->with('error', "Bahan baku '{$name}' tidak dapat dihapus karena masih digunakan dalam {$usedInRecipes} resep menu produk!");
+        }
+
+        DB::transaction(function () use ($rawMaterial) {
+            $rawMaterial->outletStocks()->delete();
+            $rawMaterial->delete();
+        });
+
+        return back()->with('status', "Bahan baku '{$name}' berhasil dihapus dari gudang.");
     }
 
     /**

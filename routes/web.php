@@ -22,12 +22,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Katalog Produk & Kategori
         Route::get('/products', [BackofficeController::class, 'products'])->name('products');
         Route::post('/products', [BackofficeController::class, 'storeProduct'])->name('products.store');
+        Route::put('/products/{product}', [BackofficeController::class, 'updateProduct'])->name('products.update');
         Route::delete('/products/{product}', [BackofficeController::class, 'destroyProduct'])->name('products.destroy');
+        Route::post('/products/{product}/toggle', [BackofficeController::class, 'toggleProduct'])->name('products.toggle');
+
         Route::post('/categories', [BackofficeController::class, 'storeCategory'])->name('categories.store');
+        Route::put('/categories/{category}', [BackofficeController::class, 'updateCategory'])->name('categories.update');
+        Route::delete('/categories/{category}', [BackofficeController::class, 'destroyCategory'])->name('categories.destroy');
 
         // Bahan Baku & Stok Gudang
         Route::get('/inventory', [BackofficeController::class, 'inventory'])->name('inventory');
         Route::post('/inventory/raw-material', [BackofficeController::class, 'storeRawMaterial'])->name('inventory.raw-material.store');
+        Route::put('/inventory/raw-material/{rawMaterial}', [BackofficeController::class, 'updateRawMaterial'])->name('inventory.raw-material.update');
+        Route::delete('/inventory/raw-material/{rawMaterial}', [BackofficeController::class, 'destroyRawMaterial'])->name('inventory.raw-material.destroy');
         Route::post('/inventory/restock', [BackofficeController::class, 'restockInventory'])->name('inventory.restock');
 
         // Riwayat Transaksi & AI

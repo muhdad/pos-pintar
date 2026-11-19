@@ -51,13 +51,13 @@
             this.password = '';
             this.pin = '';
             this.isActive = true;
-            this.selectedOutlets = [{{ $outlets->first()->id ?? 'null' }}];
+            this.selectedOutlets = ['{{ $outlets->first()->id ?? '' }}'];
             this.userModalOpen = true;
         },
 
         openEditModal(user) {
             this.isEditing = true;
-            this.modalTitle = 'Edit Data Pengguna';
+            this.modalTitle = 'Edit Data Pengguna: ' + user.name;
             this.formAction = '/backoffice/users/' + user.id;
             this.userId = user.id;
             this.name = user.name;
@@ -67,7 +67,7 @@
             this.password = '';
             this.pin = '';
             this.isActive = Boolean(user.is_active);
-            this.selectedOutlets = user.outlets.map(o => o.id);
+            this.selectedOutlets = (user.outlets || []).map(o => String(o.id));
             this.userModalOpen = true;
         }
     }" class="space-y-6">
@@ -308,50 +308,48 @@
 
                 <form :action="formAction" method="POST" class="mt-4 space-y-4">
                     @csrf
-                    <template x-if="isEditing">
-                        <input type="hidden" name="_method" value="PUT">
-                    </template>
+                    <input type="hidden" name="_method" :value="isEditing ? 'PUT' : 'POST'">
 
                     <!-- Nama Lengkap -->
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap <span class="text-rose-500">*</span></label>
+                        <label class="block text-xs font-bold text-stone-700 mb-1">Nama Lengkap <span class="text-rose-500">*</span></label>
                         <input type="text" 
                                name="name" 
                                x-model="name" 
                                required 
                                placeholder="Contoh: Rian Pratama" 
-                               class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                               class="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2 text-xs text-stone-900 font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500">
                     </div>
 
                     <!-- Email & No. HP Grid -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Alamat Email <span class="text-rose-500">*</span></label>
+                            <label class="block text-xs font-bold text-stone-700 mb-1">Alamat Email <span class="text-rose-500">*</span></label>
                             <input type="email" 
                                    name="email" 
                                    x-model="email" 
                                    required 
                                    placeholder="kasir@tokokita.com" 
-                                   class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                   class="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500">
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Nomor WhatsApp / HP</label>
+                            <label class="block text-xs font-bold text-stone-700 mb-1">Nomor WhatsApp / HP</label>
                             <input type="text" 
                                    name="phone" 
                                    x-model="phone" 
                                    placeholder="08123456789" 
-                                   class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                   class="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500">
                         </div>
                     </div>
 
                     <!-- Peran (Role) & PIN Grid -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Peran Akses (Role) <span class="text-rose-500">*</span></label>
+                            <label class="block text-xs font-bold text-stone-700 mb-1">Peran Akses (Role) <span class="text-rose-500">*</span></label>
                             <select name="role" 
                                     x-model="role" 
                                     required 
-                                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    class="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2 text-xs text-stone-900 font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500">
                                 <option value="CASHIER">Kasir (Terminal POS)</option>
                                 <option value="MANAGER">Manager (Operasional & Stok)</option>
                                 <option value="OWNER">Owner (Backoffice Penuh)</option>
@@ -359,24 +357,24 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                            <label class="block text-xs font-bold text-stone-700 mb-1">
                                 4-Digit PIN Kasir
-                                <span class="text-[10px] text-slate-400 font-normal">(opsional)</span>
+                                <span class="text-[10px] text-stone-400 font-normal">(opsional)</span>
                             </label>
                             <input type="password" 
                                    name="pin" 
                                    x-model="pin" 
                                    maxlength="4" 
-                                   placeholder="4 angka (misal: 1024)" 
-                                   class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                   placeholder="4 angka (misal: 1234)" 
+                                   class="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2 text-xs text-stone-900 font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500">
                         </div>
                     </div>
 
                     <!-- Password -->
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                        <label class="block text-xs font-bold text-stone-700 mb-1">
                             Password Login Web
-                            <span x-show="isEditing" class="text-[10px] text-slate-400 font-normal">(kosongkan jika tidak ingin mengubah)</span>
+                            <span x-show="isEditing" class="text-[10px] text-stone-400 font-normal">(kosongkan jika tidak ingin mengubah)</span>
                             <span x-show="!isEditing" class="text-rose-500">*</span>
                         </label>
                         <input type="password" 
@@ -385,22 +383,22 @@
                                :required="!isEditing" 
                                minlength="6" 
                                placeholder="Minimal 6 karakter" 
-                               class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                               class="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500">
                     </div>
 
                     <!-- Cabang Outlet Penugasan -->
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Penugasan Cabang / Outlet</label>
-                        <div class="space-y-1.5 max-h-28 overflow-y-auto p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                        <label class="block text-xs font-bold text-stone-700 mb-1">Penugasan Cabang / Outlet</label>
+                        <div class="space-y-1.5 max-h-28 overflow-y-auto p-2.5 rounded-xl bg-stone-50 border border-stone-200">
                             @foreach ($outlets as $outl)
-                                <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                                <label class="flex items-center gap-2 text-xs text-stone-700 cursor-pointer">
                                     <input type="checkbox" 
                                            name="outlet_ids[]" 
                                            value="{{ $outl->id }}" 
-                                           :checked="selectedOutlets.includes('{{ $outl->id }}')" 
-                                           class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                                           x-model="selectedOutlets" 
+                                           class="rounded border-stone-300 text-amber-600 focus:ring-amber-500">
                                     <span>{{ $outl->name }}</span>
-                                    <span class="text-[10px] text-slate-400">({{ $outl->address ?? 'Lokasi Utama' }})</span>
+                                    <span class="text-[10px] text-stone-400">({{ $outl->address ?? 'Lokasi Utama' }})</span>
                                 </label>
                             @endforeach
                         </div>
@@ -413,21 +411,21 @@
                                id="is_active_toggle" 
                                value="1" 
                                x-model="isActive" 
-                               class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-                        <label for="is_active_toggle" class="text-xs font-bold text-slate-700 cursor-pointer">
+                               class="rounded border-stone-300 text-amber-600 focus:ring-amber-500">
+                        <label for="is_active_toggle" class="text-xs font-bold text-stone-700 cursor-pointer">
                             Akun Aktif (Dapat Login & Membuka Terminal)
                         </label>
                     </div>
 
                     <!-- Modal Actions -->
-                    <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                    <div class="pt-3 border-t border-stone-100 flex items-center justify-end gap-2.5">
                         <button type="button" 
                                 @click="userModalOpen = false" 
-                                class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition">
+                                class="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold text-xs transition">
                             Batal
                         </button>
                         <button type="submit" 
-                                class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm shadow-blue-500/25 transition">
+                                class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs shadow-sm shadow-orange-500/20 transition">
                             <span x-text="isEditing ? 'Simpan Perubahan' : 'Buat Pengguna'"></span>
                         </button>
                     </div>
