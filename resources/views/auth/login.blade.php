@@ -1,36 +1,34 @@
 <x-guest-layout>
-    <!-- Title -->
-    <div class="mb-6 text-center">
-        <h2 class="text-xl font-display font-black text-stone-900 tracking-tight">Masuk ke Portal Resto</h2>
-        <p class="text-xs text-stone-500 mt-1">Akses Backoffice & Terminal Kasir Soto Lamongan Lestari</p>
+    <div class="mb-5">
+        <h2 class="text-base font-display font-bold text-stone-900 tracking-tight">Masuk ke Sistem</h2>
+        <p class="text-xs text-stone-500 mt-0.5">Gunakan akun terdaftar untuk mengakses kasir atau backoffice.</p>
     </div>
 
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
-    <!-- Login Form -->
-    <form method="POST" action="{{ route('login') }}" id="login-form">
+    <form method="POST" action="{{ route('login') }}" class="space-y-4">
         @csrf
 
         <!-- Email Address -->
         <div>
-            <label for="email" class="block text-xs font-bold text-stone-700 mb-1.5">Alamat Email</label>
+            <label for="email" class="block text-xs font-semibold text-stone-700 mb-1">Email</label>
             <input id="email" 
                    type="email" 
                    name="email" 
                    value="{{ old('email') }}" 
                    required autofocus autocomplete="username"
-                   placeholder="nama@restoran.com"
-                   class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5 text-xs text-stone-900 placeholder-stone-400 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF8A00]/30 focus:border-[#FF8A00] transition shadow-2xs">
-            <x-input-error :messages="$errors->get('email')" class="mt-1.5" />
+                   placeholder="kasir@restoran.id"
+                   class="w-full bg-white border border-[#E7E0D8] rounded-[6px] px-3 py-2 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-[#EA580C] focus:border-[#EA580C] transition">
+            <x-input-error :messages="$errors->get('email')" class="mt-1" />
         </div>
 
         <!-- Password -->
-        <div class="mt-4">
-            <div class="flex items-center justify-between mb-1.5">
-                <label for="password" class="block text-xs font-bold text-stone-700">Password</label>
+        <div>
+            <div class="flex items-center justify-between mb-1">
+                <label for="password" class="block text-xs font-semibold text-stone-700">Password</label>
                 @if (Route::has('password.request'))
-                    <a class="text-[11px] font-bold text-[#E65100] hover:text-[#5B0A14] transition" href="{{ route('password.request') }}">
+                    <a class="text-[11px] font-medium text-[#C2410C] hover:text-[#9A3412]" href="{{ route('password.request') }}">
                         Lupa password?
                     </a>
                 @endif
@@ -40,25 +38,22 @@
                    name="password" 
                    required autocomplete="current-password"
                    placeholder="••••••••"
-                   class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5 text-xs text-stone-900 placeholder-stone-400 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF8A00]/30 focus:border-[#FF8A00] transition shadow-2xs">
-            <x-input-error :messages="$errors->get('password')" class="mt-1.5" />
+                   class="w-full bg-white border border-[#E7E0D8] rounded-[6px] px-3 py-2 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-[#EA580C] focus:border-[#EA580C] transition">
+            <x-input-error :messages="$errors->get('password')" class="mt-1" />
         </div>
 
         <!-- Remember Me -->
-        <div class="block mt-4">
+        <div class="flex items-center justify-between pt-1">
             <label for="remember_me" class="inline-flex items-center cursor-pointer select-none">
-                <input id="remember_me" type="checkbox" class="rounded border-stone-300 text-[#FF8A00] shadow-2xs focus:ring-[#FF8A00]" name="remember">
-                <span class="ms-2 text-xs text-stone-600 font-medium">Ingat saya di perangkat ini</span>
+                <input id="remember_me" type="checkbox" class="rounded-[4px] border-[#E7E0D8] text-[#EA580C] focus:ring-[#EA580C]" name="remember">
+                <span class="ms-2 text-xs text-stone-600">Ingat di perangkat ini</span>
             </label>
         </div>
 
-        <!-- Submit Button (Min 48px Tap Target) -->
-        <div class="mt-6">
-            <button type="submit" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#FF8A00] via-[#F97316] to-[#E65100] hover:from-[#FFA000] hover:to-[#FF8A00] text-white font-display font-black text-xs tracking-wider uppercase shadow-brand-orange active:scale-[0.98] transition flex items-center justify-center gap-2">
+        <!-- Submit Button (Min 44px tap target, 6px radius) -->
+        <div class="pt-2">
+            <button type="submit" class="w-full h-10 rounded-[6px] bg-[#EA580C] hover:bg-[#D94E07] text-white font-bold text-xs tracking-wider uppercase transition shadow-subtle flex items-center justify-center gap-1.5 active:translate-y-px">
                 <span>Masuk Sekarang</span>
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
             </button>
         </div>
     </form>

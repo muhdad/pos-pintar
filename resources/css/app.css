@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,31 +6,44 @@
 
 :root {
     --brand-maroon: #5B0A14;
-    --brand-maroon-dark: #4D0811;
-    --brand-orange: #F97316;
-    --brand-gold: #FFB800;
-    --brand-canvas: #FFF8F0;
-    --brand-border: #EFE7DE;
+    --brand-maroon-hover: #7A0F1C;
+    --brand-orange: #EA580C;
+    --brand-orange-text: #C2410C;
+    --brand-gold: #B45309;
+    --brand-canvas: #FAF6F0;
+    --brand-surface: #FFFFFF;
+    --brand-border: #E7E0D8;
+    --brand-text: #292524;
+    --brand-muted: #78716C;
 }
 
 @layer base {
     html {
         font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+        background-color: var(--brand-canvas);
     }
 
     body {
-        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
         background-color: var(--brand-canvas);
-        color: #2D1E1B;
-        -webkit-tap-highlight-color: transparent;
+        color: var(--brand-text);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
     }
 
     h1, h2, h3, h4, h5, h6 {
         font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+        letter-spacing: -0.015em;
+    }
+
+    /* Tabular figures for aligned prices and numeric counters */
+    .tabular-nums, [data-tabular] {
+        font-variant-numeric: tabular-nums;
+        font-family: 'JetBrains Mono', monospace;
     }
 }
 
-/* Custom Sleek Scrollbar */
+/* Subtle, unobtrusive scrollbar */
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -39,19 +52,16 @@
     background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-    background: #E5DDD5;
-    border-radius: 9999px;
+    background: #D6CEC5;
+    border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: #D1C5B8;
+    background: #B8ADA2;
 }
 
-/* Micro-interaction utilities */
-.tap-active {
-    transition: transform 0.12s ease-in-out, box-shadow 0.12s ease-in-out;
-}
-.tap-active:active {
-    transform: scale(0.97);
+/* Fast, functional interaction */
+button, a {
+    transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease, color 120ms ease;
 }
 
 /* Thermal receipt printable mode (58mm & 80mm standard) */
@@ -96,7 +106,6 @@
         color: #000000 !important;
     }
 
-    /* Support 80mm printer mode */
     body.paper-80mm {
         width: 80mm !important;
     }
