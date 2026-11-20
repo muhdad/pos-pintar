@@ -34,6 +34,7 @@ export function posTerminal() {
         taxPercent: 11, // PPN 11%
         orderType: 'DINE_IN', // DINE_IN, TAKE_AWAY, GOFOOD, GRABFOOD, SHOPEEFOOD
         paymentModalOpen: false,
+        mobileCartOpen: false,
         selectedPaymentMethod: 'CASH',
         cashGiven: 0,
         customerName: '',
@@ -297,6 +298,7 @@ export function posTerminal() {
             this.customerName = '';
             this.customerPhone = '';
             this.paymentModalOpen = false;
+            this.mobileCartOpen = false;
             this.isProcessingCheckout = false;
             this.successModalOpen = true;
         },

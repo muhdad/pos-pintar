@@ -28,7 +28,7 @@
         <!-- Orders Table Card -->
         <div class="bg-white rounded-[10px] border border-[#E7E0D8] overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs">
+                <table class="w-full min-w-[720px] text-left text-xs">
                     <thead>
                         <tr class="text-stone-500 font-bold border-b border-[#E7E0D8] bg-stone-50 uppercase text-[10px] tracking-wider sticky top-0 z-10">
                             <th class="py-2.5 px-4">No. Struk</th>

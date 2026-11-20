@@ -151,7 +151,7 @@
                     </div>
 
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs">
+                        <table class="w-full min-w-[560px] text-left text-xs">
                             <thead class="bg-stone-50 border-b border-[#E7E0D8] text-[10px] font-bold uppercase tracking-wider text-stone-500">
                                 <tr>
                                     <th class="py-2.5 px-3">No. Struk</th>
