@@ -86,6 +86,16 @@
         },
         removeRecipeRow(index) {
             this.recipes.splice(index, 1);
+        },
+
+        formatRupiah(val) {
+            if (val === null || val === undefined || val === '') return '';
+            const num = String(val).replace(/\D/g, '');
+            return num ? Number(num).toLocaleString('id-ID') : '';
+        },
+        parseRupiah(val) {
+            const clean = String(val).replace(/\D/g, '');
+            return clean ? parseInt(clean, 10) : '';
         }
     }" class="space-y-5">
 
@@ -163,7 +173,7 @@
                 <table class="w-full min-w-[720px] text-left text-xs">
                     <thead>
                         <tr class="text-stone-500 font-bold border-b border-[#E7E0D8] bg-stone-50 uppercase text-[10px] tracking-wider sticky top-0 z-10">
-                            <th class="py-2.5 px-4">Menu & Foto</th>
+                            <th class="py-2.5 px-4">Menu</th>
                             <th class="py-2.5 px-3">Kategori</th>
                             <th class="py-2.5 px-3 text-right">Harga Jual</th>
                             <th class="py-2.5 px-3 text-right">HPP Modal</th>
@@ -182,18 +192,9 @@
                             @endphp
                             <tr class="hover:bg-stone-50/70 transition">
                                 <td class="py-3 px-4">
-                                    <div class="flex items-center gap-2.5">
-                                        <div class="w-10 h-10 rounded-[6px] bg-stone-100 border border-stone-200 overflow-hidden flex items-center justify-center shrink-0">
-                                            @if ($product->image_url)
-                                                <img src="{{ asset($product->image_url) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
-                                            @else
-                                                <span class="text-[9px] font-bold text-stone-400 uppercase font-mono">SLL</span>
-                                            @endif
-                                        </div>
-                                        <div>
-                                            <span class="font-bold text-stone-900 block leading-tight">{{ $product->name }}</span>
-                                            <span class="text-[10px] text-stone-400 font-mono">{{ $product->sku ?? 'SKU-REG' }}</span>
-                                        </div>
+                                    <div>
+                                        <span class="font-bold text-stone-900 block leading-tight">{{ $product->name }}</span>
+                                        <span class="text-[10px] text-stone-400 font-mono">{{ $product->sku ?? 'SKU-REG' }}</span>
                                     </div>
                                 </td>
                                 <td class="py-3 px-3">
@@ -385,43 +386,30 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs font-semibold text-stone-700 mb-1">Harga Jual (Rp) <span class="text-red-500">*</span></label>
-                                <input type="number" 
-                                       name="selling_price" 
-                                       x-model="sellingPrice" 
-                                       required min="0" 
-                                       placeholder="15000" 
-                                       class="w-full bg-white border border-[#E7E0D8] rounded-[6px] px-3 py-1.5 text-xs text-stone-900 font-mono tabular-nums font-bold focus:outline-none focus:ring-1 focus:ring-[#EA580C]">
+                                <div class="relative">
+                                    <span class="absolute left-2.5 top-1.5 text-stone-400 font-mono text-xs font-bold">Rp</span>
+                                    <input type="text" 
+                                           inputmode="numeric"
+                                           :value="formatRupiah(sellingPrice)" 
+                                           @input="sellingPrice = parseRupiah($event.target.value)"
+                                           required 
+                                           placeholder="15.000" 
+                                           class="w-full bg-white border border-[#E7E0D8] rounded-[6px] pl-8 pr-3 py-1.5 text-xs text-stone-900 font-mono tabular-nums font-bold focus:outline-none focus:ring-1 focus:ring-[#EA580C]">
+                                </div>
+                                <input type="hidden" name="selling_price" :value="sellingPrice">
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-stone-700 mb-1">HPP / Modal Satuan (Rp)</label>
-                                <input type="number" 
-                                       name="cogs" 
-                                       x-model="cogs" 
-                                       min="0" 
-                                       placeholder="Dihitung dari BOM" 
-                                       class="w-full bg-white border border-[#E7E0D8] rounded-[6px] px-3 py-1.5 text-xs text-stone-900 font-mono tabular-nums focus:outline-none focus:ring-1 focus:ring-[#EA580C]">
-                            </div>
-                        </div>
-
-                        <!-- Foto Produk -->
-                        <div class="p-3 rounded-[6px] bg-stone-50 border border-stone-200 space-y-2">
-                            <label class="block text-xs font-semibold text-stone-700">Foto Menu (Path URL)</label>
-                            <input type="text" 
-                                   name="image_url" 
-                                   x-model="imageUrl" 
-                                   placeholder="/images/products/soto-ayam.jpg" 
-                                   class="w-full bg-white border border-stone-200 rounded-[6px] px-2.5 py-1 text-xs text-stone-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#EA580C]">
-                            
-                            <div class="text-[10px] text-stone-500 font-semibold uppercase tracking-wider">Preset Foto Menu:</div>
-                            <div class="flex flex-wrap gap-1">
-                                <button type="button" @click="imageUrl = '/images/products/soto-ayam.jpg'" class="px-2 py-0.5 rounded-[4px] bg-white border border-stone-200 hover:border-stone-400 text-[10px] text-stone-700">Soto Ayam</button>
-                                <button type="button" @click="imageUrl = '/images/products/soto-daging.jpg'" class="px-2 py-0.5 rounded-[4px] bg-white border border-stone-200 hover:border-stone-400 text-[10px] text-stone-700">Soto Daging</button>
-                                <button type="button" @click="imageUrl = '/images/products/mie-ayam.jpg'" class="px-2 py-0.5 rounded-[4px] bg-white border border-stone-200 hover:border-stone-400 text-[10px] text-stone-700">Mie Ayam</button>
-                                <button type="button" @click="imageUrl = '/images/products/bakso.jpg'" class="px-2 py-0.5 rounded-[4px] bg-white border border-stone-200 hover:border-stone-400 text-[10px] text-stone-700">Bakso</button>
-                                <button type="button" @click="imageUrl = '/images/products/ceker.jpg'" class="px-2 py-0.5 rounded-[4px] bg-white border border-stone-200 hover:border-stone-400 text-[10px] text-stone-700">Ceker</button>
-                                <button type="button" @click="imageUrl = '/images/products/lauk.jpg'" class="px-2 py-0.5 rounded-[4px] bg-white border border-stone-200 hover:border-stone-400 text-[10px] text-stone-700">Lauk/Telur</button>
-                                <button type="button" @click="imageUrl = '/images/products/es-jeruk.jpg'" class="px-2 py-0.5 rounded-[4px] bg-white border border-stone-200 hover:border-stone-400 text-[10px] text-stone-700">Es Jeruk</button>
-                                <button type="button" @click="imageUrl = '/images/products/es-teh.jpg'" class="px-2 py-0.5 rounded-[4px] bg-white border border-stone-200 hover:border-stone-400 text-[10px] text-stone-700">Es Teh</button>
+                                <div class="relative">
+                                    <span class="absolute left-2.5 top-1.5 text-stone-400 font-mono text-xs font-bold">Rp</span>
+                                    <input type="text" 
+                                           inputmode="numeric"
+                                           :value="formatRupiah(cogs)" 
+                                           @input="cogs = parseRupiah($event.target.value)"
+                                           placeholder="0" 
+                                           class="w-full bg-white border border-[#E7E0D8] rounded-[6px] pl-8 pr-3 py-1.5 text-xs text-stone-900 font-mono tabular-nums focus:outline-none focus:ring-1 focus:ring-[#EA580C]">
+                                </div>
+                                <input type="hidden" name="cogs" :value="cogs">
                             </div>
                         </div>
 

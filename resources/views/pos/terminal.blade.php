@@ -121,40 +121,30 @@
                     </div>
                 </div>
 
-                <!-- Product Tiles Grid (Fully responsive columns, never squished or truncated) -->
-                <div class="flex-1 overflow-y-auto min-h-0 content-start auto-rows-max grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3 p-0.5 pb-24 lg:pb-8">
+                <!-- Product Tiles Grid: Text-Only Minimalist POS Tiles (Fast, Clear, High Density) -->
+                <div class="flex-1 overflow-y-auto min-h-0 content-start auto-rows-max grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-2.5 p-0.5 pb-24 lg:pb-8">
                     <template x-for="product in filteredProducts" :key="product.id">
                         <div @click="addToCart(product)"
-                             class="bg-white border border-[#E7E0D8] hover:border-[#EA580C] rounded-[8px] p-2 sm:p-2.5 flex flex-col justify-between cursor-pointer transition active:scale-[0.98] group min-h-[190px] sm:min-h-[220px] relative select-none">
+                             class="bg-white border border-[#E7E0D8] hover:border-[#EA580C] hover:bg-[#FFFDF9] rounded-[8px] p-2.5 sm:p-3 flex flex-col justify-between cursor-pointer transition active:scale-[0.98] group min-h-[96px] sm:min-h-[104px] relative select-none hover:shadow-subtle">
                             
                             <div>
-                                <!-- Image Thumbnail (Proportional aspect ratio, clean border) -->
-                                <div class="w-full h-24 sm:h-28 rounded-[6px] bg-stone-100 border border-stone-200/60 overflow-hidden mb-1.5 sm:mb-2 relative shrink-0">
-                                    <template x-if="product.image_url">
-                                        <img :src="product.image_url" :alt="product.name" class="w-full h-full object-cover">
-                                    </template>
-                                    <template x-if="!product.image_url">
-                                        <div class="w-full h-full flex items-center justify-center text-[10px] sm:text-xs font-bold text-stone-400 uppercase tracking-wider">
-                                            SLL MENU
-                                        </div>
-                                    </template>
+                                <!-- SKU / Category indicator -->
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-[9px] font-mono font-bold uppercase tracking-wider text-stone-400 truncate" x-text="product.sku || 'Menu SLL'"></span>
+                                    <span class="w-1.5 h-1.5 rounded-full bg-[#EA580C]/40 group-hover:bg-[#EA580C] transition shrink-0"></span>
                                 </div>
 
-                                <!-- Name & Category -->
-                                <h3 class="text-xs sm:text-sm font-bold text-stone-900 group-hover:text-[#5B0A14] line-clamp-2 leading-tight min-h-[1.75rem] sm:min-h-[2rem]" x-text="product.name"></h3>
-                                <span class="text-[10px] text-stone-400 font-mono mt-0.5 block truncate" x-text="product.sku || 'Menu Utama'"></span>
+                                <!-- Name (Bold, clear display) -->
+                                <h3 class="text-xs sm:text-sm font-bold text-stone-900 group-hover:text-[#5B0A14] line-clamp-2 leading-tight" x-text="product.name"></h3>
                             </div>
 
-                            <!-- Price & Add Action (Tap target >= 44px) -->
-                            <div class="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-stone-100 flex items-center justify-between">
-                                <div>
-                                    <span class="text-[9px] sm:text-[10px] text-stone-400 block -mb-0.5">Harga</span>
-                                    <span class="text-xs sm:text-sm font-bold text-[#C2410C] font-mono tabular-nums">
-                                        Rp<span x-text="Number(product.selling_price).toLocaleString('id-ID')"></span>
-                                    </span>
-                                </div>
+                            <!-- Price & Quick Add Button -->
+                            <div class="mt-2 pt-1.5 border-t border-stone-100 flex items-center justify-between">
+                                <span class="text-xs sm:text-sm font-bold text-[#C2410C] font-mono tabular-nums">
+                                    Rp<span x-text="Number(product.selling_price).toLocaleString('id-ID')"></span>
+                                </span>
                                 <button type="button" 
-                                        class="w-7 h-7 sm:w-8 sm:h-8 rounded-[6px] bg-[#EA580C] hover:bg-[#D94E07] text-white flex items-center justify-center text-sm sm:text-base font-bold transition active:translate-y-px shrink-0"
+                                        class="w-6 h-6 sm:w-7 sm:h-7 rounded-[4px] bg-stone-100 group-hover:bg-[#EA580C] text-stone-700 group-hover:text-white flex items-center justify-center text-xs sm:text-sm font-bold transition active:translate-y-px shrink-0"
                                         title="Tambah item">
                                     +
                                 </button>
@@ -530,16 +520,22 @@
                             <label class="block text-xs font-semibold text-stone-700">Nominal Diterima</label>
                             <span class="text-[11px] text-stone-400">Pas: <strong>Rp<span x-text="Number(finalTotal).toLocaleString('id-ID')"></span></strong></span>
                         </div>
-                        <input type="number" 
-                               x-model="cashGiven" 
-                               class="w-full bg-white border border-stone-300 rounded-[6px] px-3 py-1.5 text-sm font-bold text-stone-900 font-mono tabular-nums focus:outline-none focus:ring-1 focus:ring-[#EA580C]">
+                        <div class="relative">
+                            <span class="absolute left-3 top-2 text-stone-400 font-mono text-xs font-bold">Rp</span>
+                            <input type="text" 
+                                   inputmode="numeric"
+                                   :value="formattedCashGiven"
+                                   @input="setFormattedCashGiven($event.target.value)"
+                                   placeholder="0"
+                                   class="w-full bg-white border border-stone-300 rounded-[6px] pl-9 pr-3 py-1.5 text-sm font-bold text-stone-900 font-mono tabular-nums focus:outline-none focus:ring-1 focus:ring-[#EA580C]">
+                        </div>
                         
                         <!-- Quick Cash Buttons (6px radius) -->
                         <div class="grid grid-cols-4 gap-1.5 text-xs">
                             <button type="button" @click="cashGiven = finalTotal" class="py-1.5 rounded-[6px] bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold border border-stone-200 transition">Uang Pas</button>
-                            <button type="button" @click="cashGiven = 20000" class="py-1.5 rounded-[6px] bg-stone-50 hover:bg-stone-100 text-stone-700 border border-stone-200 transition">20k</button>
-                            <button type="button" @click="cashGiven = 50000" class="py-1.5 rounded-[6px] bg-stone-50 hover:bg-stone-100 text-stone-700 border border-stone-200 transition">50k</button>
-                            <button type="button" @click="cashGiven = 100000" class="py-1.5 rounded-[6px] bg-stone-50 hover:bg-stone-100 text-stone-700 border border-stone-200 transition">100k</button>
+                            <button type="button" @click="cashGiven = 20000" class="py-1.5 rounded-[6px] bg-stone-50 hover:bg-stone-100 text-stone-700 border border-stone-200 transition">20.000</button>
+                            <button type="button" @click="cashGiven = 50000" class="py-1.5 rounded-[6px] bg-stone-50 hover:bg-stone-100 text-stone-700 border border-stone-200 transition">50.000</button>
+                            <button type="button" @click="cashGiven = 100000" class="py-1.5 rounded-[6px] bg-stone-50 hover:bg-stone-100 text-stone-700 border border-stone-200 transition">100.000</button>
                         </div>
 
                         <!-- Automatic Change Calculation -->

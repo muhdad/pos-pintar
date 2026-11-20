@@ -210,6 +210,15 @@ export function posTerminal() {
             return 0;
         },
 
+        get formattedCashGiven() {
+            return this.cashGiven ? Number(this.cashGiven).toLocaleString('id-ID') : '';
+        },
+
+        setFormattedCashGiven(val) {
+            const clean = String(val).replace(/\D/g, '');
+            this.cashGiven = clean ? parseInt(clean, 10) : 0;
+        },
+
         // Selesaikan pesanan (Checkout Offline-First & Direct Cloud Sync)
         async processCheckout() {
             if (this.cart.length === 0 || this.isProcessingCheckout) return;
