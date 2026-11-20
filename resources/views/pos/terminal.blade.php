@@ -478,21 +478,115 @@
                     <button type="button"
                             @click="window.thermalPrinter && window.thermalPrinter.printReceipt(completedOrder)"
                             class="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#E65100] hover:from-[#FFA000] hover:to-[#FF8A00] text-white font-black text-xs shadow-brand-orange transition flex items-center justify-center gap-1.5 active:scale-95">
-                        <span>🖨️ Cetak Struk Dapur / Kasir</span>
+                        <span>🖨️ Cetak Struk Thermal (58mm)</span>
                     </button>
                     
-                    <div class="grid grid-cols-2 gap-2">
+                    <button type="button"
+                            @click="window.thermalPrinter && window.thermalPrinter.printBrowser(completedOrder)"
+                            class="w-full py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-200 font-bold text-xs transition flex items-center justify-center gap-1.5">
+                        <span>🖥️ Cetak via Browser (USB / Wi-Fi)</span>
+                    </button>
+                    
+                    <div class="grid grid-cols-2 gap-2 pt-1">
                         <a href="{{ route('dashboard') }}"
-                           class="py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-200 font-bold text-xs transition flex items-center justify-center">
+                           class="py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-200 font-bold text-xs transition flex items-center justify-center">
                             📊 Cek Omzet
                         </a>
                         <button type="button"
                                 @click="successModalOpen = false"
-                                class="py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-[#5B0A14] border border-amber-200 font-bold text-xs transition flex items-center justify-center">
+                                class="py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-[#5B0A14] border border-amber-200 font-bold text-xs transition flex items-center justify-center">
                             🛒 Transaksi Baru
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Hidden Printable Thermal Receipt Container (Standard 58mm / 80mm - Auto-revealed during print) -->
+        <div id="printable-receipt" class="hidden text-black font-mono text-[11px] leading-tight select-none">
+            <div class="text-center pb-2 border-b border-dashed border-black">
+                <h2 class="text-sm font-black tracking-wider uppercase">SOTO LAMONGAN LESTARI</h2>
+                <p class="text-[10px] mt-0.5">{{ $outlet->name ?? 'Cabang Utama' }}</p>
+                <p class="text-[10px]">Telp: 0852-1325-4219</p>
+            </div>
+
+            <div class="py-1.5 border-b border-dashed border-black text-[10px] space-y-0.5">
+                <div class="flex justify-between">
+                    <span>No: <strong x-text="completedOrder?.order_number"></strong></span>
+                    <span x-text="new Date(completedOrder?.created_at || Date.now()).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Tgl: <span x-text="new Date(completedOrder?.created_at || Date.now()).toLocaleDateString('id-ID')"></span></span>
+                    <span class="font-bold uppercase" x-text="orderType"></span>
+                </div>
+                <div class="flex justify-between" x-show="completedOrder?.customer_name">
+                    <span>Plg: <span x-text="completedOrder?.customer_name"></span></span>
+                </div>
+            </div>
+
+            <!-- Items -->
+            <div class="py-1.5 border-b border-dashed border-black space-y-1">
+                <template x-for="item in (completedOrder?.items || [])" :key="item.name">
+                    <div>
+                        <div class="font-bold text-[11px]" x-text="item.name"></div>
+                        <div class="flex justify-between text-[10px]">
+                            <span x-text="`${item.quantity} x ${Number(item.unit_price).toLocaleString('id-ID')}`"></span>
+                            <span class="font-bold" x-text="Number(item.subtotal).toLocaleString('id-ID')"></span>
+                        </div>
+                        <template x-if="item.notes">
+                            <div class="text-[9px] italic" x-text="`* ${item.notes}`"></div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Totals -->
+            <div class="py-1.5 border-b border-dashed border-black text-[10px] space-y-0.5">
+                <div class="flex justify-between">
+                    <span>Subtotal</span>
+                    <span x-text="Number(completedOrder?.total_amount || 0).toLocaleString('id-ID')"></span>
+                </div>
+                <div class="flex justify-between" x-show="completedOrder?.discount_amount > 0">
+                    <span>Diskon</span>
+                    <span x-text="`-${Number(completedOrder?.discount_amount || 0).toLocaleString('id-ID')}`"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span>PPN (11%)</span>
+                    <span x-text="Number(completedOrder?.tax_amount || 0).toLocaleString('id-ID')"></span>
+                </div>
+                <div class="flex justify-between font-black text-xs pt-1 border-t border-dotted border-black">
+                    <span>TOTAL</span>
+                    <span x-text="`Rp${Number(completedOrder?.final_amount || 0).toLocaleString('id-ID')}`"></span>
+                </div>
+            </div>
+
+            <!-- Payment info -->
+            <div class="py-1.5 border-b border-dashed border-black text-[10px] space-y-0.5">
+                <div class="flex justify-between">
+                    <span>Metode</span>
+                    <span class="font-bold uppercase" x-text="completedOrder?.payment?.method || 'CASH'"></span>
+                </div>
+                <template x-if="completedOrder?.payment?.method === 'CASH'">
+                    <div>
+                        <div class="flex justify-between">
+                            <span>Bayar Tunai</span>
+                            <span x-text="Number(completedOrder?.cashGiven || completedOrder?.final_amount || 0).toLocaleString('id-ID')"></span>
+                        </div>
+                        <div class="flex justify-between font-bold">
+                            <span>Kembalian</span>
+                            <span x-text="Number(completedOrder?.changeDue || 0).toLocaleString('id-ID')"></span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center pt-2 text-[10px] space-y-0.5">
+                <p class="font-bold">Rasa Mantap, Harga Bersahabat</p>
+                <p>Terima Kasih Atas Kunjungan Anda!</p>
+                <p class="text-[8px] text-gray-500 pt-1">SLL Smart POS Cloud</p>
+            </div>
+        </div>
             </div>
         </div>
     </div>
