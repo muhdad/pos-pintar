@@ -221,5 +221,53 @@ class InventoryDeductionService
             return $outletStock;
         });
     }
+
+    /**
+     * Kembalikan stok bahan baku saat transaksi dibatalkan (VOID).
+     */
+    public function revertForOrder(Order $order, string $reason): void
+    {
+        $order->loadMissing(['items.product.recipes.rawMaterial']);
+
+        foreach ($order->items as $item) {
+            $product = $item->product;
+
+            if (! $product || ! $product->track_stock) {
+                continue;
+            }
+
+            foreach ($product->recipes as $recipe) {
+                $rawMaterial = $recipe->rawMaterial;
+                if (! $rawMaterial) {
+                    continue;
+                }
+
+                $quantityToRevert = bcmul((string) $item->quantity, (string) $recipe->quantity, 4);
+
+                $outletStock = OutletStock::where('outlet_id', $order->outlet_id)
+                    ->where('raw_material_id', $rawMaterial->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($outletStock) {
+                    $currentStock = (string) $outletStock->current_stock;
+                    $balanceAfter = bcadd($currentStock, $quantityToRevert, 4);
+
+                    $outletStock->update([
+                        'current_stock' => $balanceAfter,
+                    ]);
+
+                    StockMovement::create([
+                        'outlet_stock_id' => $outletStock->id,
+                        'type' => 'OPNAME_ADJUSTMENT',
+                        'quantity_delta' => $quantityToRevert,
+                        'balance_after' => $balanceAfter,
+                        'reference_id' => $order->id,
+                        'notes' => "VOID Order #{$order->order_number}: {$reason}",
+                    ]);
+                }
+            }
+        }
+    }
 }
 

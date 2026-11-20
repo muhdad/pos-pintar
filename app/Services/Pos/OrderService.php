@@ -127,8 +127,22 @@ class OrderService
                 ]);
             }
 
-            // 5. Simpan Payment jika ada
-            if (! empty($payload['payment'])) {
+            // 5. Simpan Payment jika ada (Dukungan Single & Multi-Payment / Split Payment)
+            if (! empty($payload['payments']) && is_array($payload['payments'])) {
+                foreach ($payload['payments'] as $p) {
+                    if ((float) ($p['amount'] ?? 0) > 0) {
+                        Payment::create([
+                            'id' => (string) Str::uuid(),
+                            'order_id' => $order->id,
+                            'method' => strtoupper($p['method'] ?? 'CASH'),
+                            'amount' => (float) ($p['amount'] ?? 0),
+                            'status' => strtoupper($p['status'] ?? 'SETTLED'),
+                            'reference_no' => $p['reference_no'] ?? null,
+                            'paid_at' => $p['paid_at'] ?? now(),
+                        ]);
+                    }
+                }
+            } elseif (! empty($payload['payment'])) {
                 Payment::create([
                     'id' => (string) Str::uuid(),
                     'order_id' => $order->id,
@@ -143,16 +157,26 @@ class OrderService
             // 6. Pemotongan stok bahan baku resep (BOM) otomatis
             $this->inventoryDeductionService->deductForOrder($order);
 
-            // 7. Catat Audit Log
+            // 7. Update status okupansi Meja jika ada
+            if (! empty($order->table_id)) {
+                \App\Models\Table::where('id', $order->table_id)->update([
+                    'is_occupied' => in_array($order->status, ['PENDING', 'HOLD', 'DRAFT']),
+                    'current_order_id' => in_array($order->status, ['PENDING', 'HOLD', 'DRAFT']) ? $order->id : null,
+                ]);
+            }
+
+            // 8. Catat Audit Log
             AuditLog::create([
                 'tenant_id' => $order->tenant_id,
                 'user_id' => $order->user_id,
-                'action' => 'ORDER_CREATED',
-                'description' => "Order {$order->order_number} berhasil dibuat (Total: Rp" . number_format($order->final_amount, 0, ',', '.') . ")",
+                'action' => in_array($order->status, ['PENDING', 'HOLD']) ? 'OPEN_BILL_CREATED' : 'ORDER_CREATED',
+                'description' => "Order {$order->order_number} dibuat (Status: {$order->status}, Total: Rp" . number_format($order->final_amount, 0, ',', '.') . ")",
                 'metadata' => [
                     'order_id' => $order->id,
+                    'status' => $order->status,
+                    'table_id' => $order->table_id,
                     'items_count' => count($itemsToCreate),
-                    'payment_method' => $payload['payment']['method'] ?? 'CASH',
+                    'payment_method' => $payload['payment']['method'] ?? ($payload['payments'][0]['method'] ?? 'NONE'),
                     'is_offline_sync' => ! empty($payload['is_offline_sync']),
                 ],
             ]);
@@ -203,6 +227,7 @@ class OrderService
 
     /**
      * Pembatalan (Void) pesanan dengan otorisasi PIN supervisor/owner.
+     * Mengembalikan stok bahan baku secara transaksional ke inventaris gudang.
      */
     public function voidOrder(string $orderId, int $authorizingUserId, string $reason): Order
     {
@@ -217,12 +242,23 @@ class OrderService
                 'status' => 'VOIDED',
             ]);
 
-            // Catat log pembatalan transaksi dengan user yang mengotorisasi
+            // 1. Reversal otomatis stok bahan baku resep (BOM)
+            $this->inventoryDeductionService->revertForOrder($order, $reason);
+
+            // 2. Bebaskan nomor meja jika transaksi terikat pada meja tertentu
+            if (! empty($order->table_id)) {
+                \App\Models\Table::where('id', $order->table_id)->update([
+                    'is_occupied' => false,
+                    'current_order_id' => null,
+                ]);
+            }
+
+            // 3. Catat log pembatalan transaksi dengan user yang mengotorisasi
             AuditLog::create([
                 'tenant_id' => $order->tenant_id,
                 'user_id' => $authorizingUserId,
                 'action' => 'VOID_ORDER',
-                'description' => "Order #{$order->order_number} dibatalkan. Alasan: {$reason}",
+                'description' => "Order #{$order->order_number} dibatalkan (VOID). Alasan: {$reason}",
                 'metadata' => [
                     'order_id' => $order->id,
                     'void_by' => $authorizingUserId,
@@ -236,6 +272,91 @@ class OrderService
             } catch (\Throwable $e) {
                 // ignore
             }
+
+            return $order;
+        });
+    }
+
+    /**
+     * Simpan pesanan gantung (Hold Order / Open Bill) untuk pelanggan makan dulu bayar nanti.
+     */
+    public function holdOrder(array $payload): Order
+    {
+        $payload['status'] = 'PENDING';
+        $payload['payment'] = null; // Belum dibayar
+        $payload['payments'] = null;
+
+        return $this->checkout($payload);
+    }
+
+    /**
+     * Ambil daftar Open Bill yang sedang aktif belum dibayar di outlet terkait.
+     */
+    public function getActiveOpenBills(string $outletId)
+    {
+        return Order::where('outlet_id', $outletId)
+            ->whereIn('status', ['PENDING', 'HOLD'])
+            ->with(['items.product', 'table', 'user'])
+            ->latest()
+            ->get();
+    }
+
+    /**
+     * Pelunasan pesanan Open Bill yang telah selesai makan.
+     */
+    public function settleOpenBill(string $orderId, array $paymentPayload): Order
+    {
+        return DB::transaction(function () use ($orderId, $paymentPayload) {
+            $order = Order::findOrFail($orderId);
+
+            $order->update([
+                'status' => 'PAID',
+            ]);
+
+            // Simpan pembayaran
+            if (! empty($paymentPayload['payments']) && is_array($paymentPayload['payments'])) {
+                foreach ($paymentPayload['payments'] as $p) {
+                    if ((float) ($p['amount'] ?? 0) > 0) {
+                        Payment::create([
+                            'id' => (string) Str::uuid(),
+                            'order_id' => $order->id,
+                            'method' => strtoupper($p['method'] ?? 'CASH'),
+                            'amount' => (float) ($p['amount'] ?? 0),
+                            'status' => 'SETTLED',
+                            'reference_no' => $p['reference_no'] ?? null,
+                            'paid_at' => now(),
+                        ]);
+                    }
+                }
+            } elseif (! empty($paymentPayload['payment'])) {
+                Payment::create([
+                    'id' => (string) Str::uuid(),
+                    'order_id' => $order->id,
+                    'method' => strtoupper($paymentPayload['payment']['method'] ?? 'CASH'),
+                    'amount' => $paymentPayload['payment']['amount'] ?? $order->final_amount,
+                    'status' => 'SETTLED',
+                    'reference_no' => $paymentPayload['payment']['reference_no'] ?? null,
+                    'paid_at' => now(),
+                ]);
+            }
+
+            // Bebaskan meja
+            if (! empty($order->table_id)) {
+                \App\Models\Table::where('id', $order->table_id)->update([
+                    'is_occupied' => false,
+                    'current_order_id' => null,
+                ]);
+            }
+
+            AuditLog::create([
+                'tenant_id' => $order->tenant_id,
+                'user_id' => $order->user_id,
+                'action' => 'OPEN_BILL_SETTLED',
+                'description' => "Open Bill #{$order->order_number} telah dilunasi (Total: Rp" . number_format($order->final_amount, 0, ',', '.') . ")",
+                'metadata' => [
+                    'order_id' => $order->id,
+                ],
+            ]);
 
             return $order;
         });

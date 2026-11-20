@@ -43,6 +43,26 @@ class PosTerminalController extends Controller
             ->latest('start_time')
             ->first();
 
+        // Ambil atau inisialisasi Meja Resto untuk Dine-In
+        $tables = \App\Models\Table::where('outlet_id', $outlet->id)->orderBy('name')->get();
+        if ($tables->isEmpty()) {
+            for ($i = 1; $i <= 12; $i++) {
+                $tables->push(\App\Models\Table::create([
+                    'id' => (string) \Illuminate\Support\Str::uuid(),
+                    'outlet_id' => $outlet->id,
+                    'name' => sprintf('Meja %02d', $i),
+                    'is_occupied' => false,
+                ]));
+            }
+        }
+
+        // Ambil daftar Open Bill aktif yang belum dibayar
+        $activeOpenBills = \App\Models\Order::where('outlet_id', $outlet->id)
+            ->whereIn('status', ['PENDING', 'HOLD'])
+            ->with(['items.product', 'table'])
+            ->latest()
+            ->get();
+
         // Ambil data produk & kategori tenant aktif
         $categories = Category::where('tenant_id', $tenant->id)->get(['id', 'name', 'icon']);
 
@@ -51,6 +71,6 @@ class PosTerminalController extends Controller
             ->with(['recipes.rawMaterial'])
             ->get(['id', 'category_id', 'sku', 'barcode', 'name', 'selling_price', 'cogs', 'image_url', 'track_stock']);
 
-        return view('pos.terminal', compact('tenant', 'outlet', 'shift', 'categories', 'products'));
+        return view('pos.terminal', compact('tenant', 'outlet', 'shift', 'tables', 'activeOpenBills', 'categories', 'products'));
     }
 }

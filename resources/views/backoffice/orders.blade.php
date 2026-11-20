@@ -16,6 +16,15 @@
                 <p class="text-xs text-stone-500 mt-0.5">Daftar rekonsiliasi seluruh transaksi kasir online dan offline yang telah tersinkronisasi.</p>
             </div>
             <div class="flex items-center gap-2">
+                <!-- Export CSV / Excel Button -->
+                <a href="{{ route('backoffice.orders.export-csv') }}" 
+                   class="px-3 py-1.5 rounded-[6px] bg-[#5B0A14] hover:bg-[#7A0F1C] text-white font-semibold text-xs transition flex items-center gap-1.5 shadow-subtle active:translate-y-px">
+                    <svg class="w-3.5 h-3.5 text-[#FFB800]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>Export CSV / Excel</span>
+                </a>
+
                 <a href="{{ route('pos.index') }}" class="px-3.5 py-1.5 rounded-[6px] bg-[#EA580C] hover:bg-[#D94E07] text-white font-bold text-xs tracking-wide transition shadow-subtle flex items-center gap-1.5 active:translate-y-px">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -164,6 +173,19 @@
                         </div>
                     </div>
                 </div>
+
+                <template x-if="selectedOrder && selectedOrder.status !== 'VOIDED'">
+                    <form :action="'/backoffice/orders/' + selectedOrder.id + '/void'" 
+                          method="POST" 
+                          onsubmit="return confirm('Apakah Anda yakin ingin membatalkan transaksi ini (VOID)? Stok bahan baku akan otomatis dikembalikan ke gudang.')" 
+                          class="mt-2.5 pt-2 border-t border-stone-100 flex items-center gap-1.5">
+                        @csrf
+                        <input type="text" name="reason" required placeholder="Alasan void (misal: salah input kasir)" class="flex-1 text-[11px] bg-stone-50 border border-stone-200 rounded-[4px] px-2 py-1 text-stone-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                        <button type="submit" class="px-2.5 py-1 rounded-[4px] bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition shrink-0">
+                            Void Pesanan
+                        </button>
+                    </form>
+                </template>
 
                 <div class="mt-4 flex gap-2">
                     <button type="button" 

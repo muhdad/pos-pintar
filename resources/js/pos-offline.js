@@ -15,46 +15,95 @@ posDb.version(1).stores({
 });
 
 /**
+ * Format string ribuan dengan titik (contoh: 25000 -> 25.000)
+ */
+export function formatThousand(val) {
+    if (val === null || val === undefined || val === '') return '';
+    const num = typeof val === 'number' ? val : parseInt(String(val).replace(/\D/g, ''), 10);
+    if (isNaN(num)) return '';
+    return num.toLocaleString('id-ID');
+}
+
+/**
+ * Parse string dengan format titik ribuan menjadi integer (contoh: "25.000" -> 25000)
+ */
+export function parseThousand(str) {
+    if (!str) return 0;
+    const clean = String(str).replace(/\D/g, '');
+    return clean ? parseInt(clean, 10) : 0;
+}
+
+/**
  * Alpine.js Store & Controller untuk Terminal Kasir
  */
 export function posTerminal() {
     return {
-        // State
+        // Status Konektivitas & Sinkronisasi
         isOnline: navigator.onLine,
         isSyncing: false,
         isProcessingCheckout: false,
+        isHoldingOrder: false,
+
+        // Modal Views
+        paymentModalOpen: false,
         successModalOpen: false,
-        completedOrder: null,
+        mobileCartOpen: false,
+        openBillsModalOpen: false,
+        startShiftModalOpen: false,
+        pettyCashModalOpen: false,
+        closeShiftModalOpen: false,
+        shiftSummaryModalOpen: false,
+
+        // Data Master
         activeCategory: 'ALL',
         searchQuery: '',
         categories: [],
         products: [],
+        tables: [],
+        openBills: [],
+
+        // State Transaksi & Keranjang
         cart: [],
         discount: 0,
         taxPercent: 11, // PPN 11%
         orderType: 'DINE_IN', // DINE_IN, TAKE_AWAY, GOFOOD, GRABFOOD, SHOPEEFOOD
-        paymentModalOpen: false,
-        mobileCartOpen: false,
-        selectedPaymentMethod: 'CASH',
-        cashGiven: 0,
+        selectedTableId: '',
+        selectedTableName: '',
+        currentOpenBillId: null,
         customerName: '',
         customerPhone: '',
-        pinModalOpen: false,
-        cashierPin: '',
-        activeCashier: {
-            name: 'Kasir',
-            role: 'CASHIER'
-        },
+        completedOrder: null,
+
+        // Pembayaran
+        selectedPaymentMethod: 'CASH', // CASH, QRIS, TRANSFER, MULTI
+        cashGiven: 0,
+        multiCashAmount: 0,
+        multiNonCashAmount: 0,
+        multiNonCashMethod: 'QRIS',
+
+        // Shift Kasir
+        activeShift: null,
+        startCash: 0,
+        startCashNotes: '',
+        pettyCashAmount: 0,
+        pettyCashReason: '',
+        actualCash: 0,
+        closeShiftNotes: '',
+        shiftReport: null,
 
         // Inisialisasi Terminal
         async init() {
+            // Setup data shift awal
+            this.activeShift = window.POS_CONFIG?.activeShift || null;
+            this.tables = window.POS_INITIAL_TABLES || [];
+            this.openBills = window.POS_INITIAL_OPEN_BILLS || [];
+
             // Keyboard shortcuts untuk kasir
             window.addEventListener('keydown', (e) => {
                 if (e.key === 'F2') {
                     e.preventDefault();
                     if (this.cart.length > 0 && !this.paymentModalOpen) {
-                        this.paymentModalOpen = true;
-                        this.cashGiven = this.finalTotal;
+                        this.openPaymentModal();
                     }
                 }
                 if (e.key === 'F3' || (e.key === '/' && document.activeElement.tagName !== 'INPUT')) {
@@ -62,9 +111,17 @@ export function posTerminal() {
                     const searchInput = document.getElementById('pos-search-input');
                     if (searchInput) searchInput.focus();
                 }
+                if (e.key === 'F4') {
+                    e.preventDefault();
+                    if (this.cart.length > 0) {
+                        this.holdCurrentOrder();
+                    }
+                }
                 if (e.key === 'Escape') {
-                    if (this.paymentModalOpen) this.paymentModalOpen = false;
-                    if (this.successModalOpen) this.successModalOpen = false;
+                    this.paymentModalOpen = false;
+                    this.successModalOpen = false;
+                    this.openBillsModalOpen = false;
+                    this.pettyCashModalOpen = false;
                 }
             });
 
@@ -72,16 +129,16 @@ export function posTerminal() {
             window.addEventListener('online', () => {
                 this.isOnline = true;
                 this.syncOfflineQueue();
+                this.fetchOpenBills();
             });
             window.addEventListener('offline', () => {
                 this.isOnline = false;
             });
 
-            // 1. Jika blade telah mem-passing produk awal, gunakan langsung seketika (0ms)
+            // Inisialisasi katalog
             if (window.POS_INITIAL_PRODUCTS && window.POS_INITIAL_PRODUCTS.length > 0) {
                 this.products = window.POS_INITIAL_PRODUCTS;
                 this.categories = window.POS_INITIAL_CATEGORIES || [];
-                // Simpan ke IndexedDB lokal di background untuk offline berikutnya
                 try {
                     await posDb.products.bulkPut(window.POS_INITIAL_PRODUCTS);
                     if (window.POS_INITIAL_CATEGORIES && window.POS_INITIAL_CATEGORIES.length > 0) {
@@ -91,17 +148,15 @@ export function posTerminal() {
                     console.warn('Gagal cache ke IndexedDB:', e);
                 }
             } else {
-                // Muat data katalog lokal dari Dexie
                 await this.loadLocalCatalog();
             }
 
-            // Coba ambil pembaruan katalog jika online
             if (this.isOnline) {
                 await this.refreshCatalogFromCloud();
                 await this.syncOfflineQueue();
             }
 
-            // Sync otomatis setiap 30 detik jika ada antrean
+            // Sync otomatis background
             setInterval(() => {
                 if (this.isOnline && !this.isSyncing) {
                     this.syncOfflineQueue();
@@ -115,7 +170,7 @@ export function posTerminal() {
             this.products = await posDb.products.toArray();
         },
 
-        // Ambil update master data dari endpoint Laravel
+        // Ambil update master data dari server
         async refreshCatalogFromCloud() {
             try {
                 const tenantId = window.POS_CONFIG?.tenantId || '';
@@ -126,21 +181,24 @@ export function posTerminal() {
                 if (response.ok) {
                     const data = await response.json();
                     
-                    if (data.categories && data.categories.length > 0) {
+                    if (data.categories?.length > 0) {
                         await posDb.categories.clear();
                         await posDb.categories.bulkPut(data.categories);
                         this.categories = data.categories;
                     }
 
-                    if (data.products && data.products.length > 0) {
+                    if (data.products?.length > 0) {
                         await posDb.products.clear();
                         await posDb.products.bulkPut(data.products);
                         this.products = data.products;
                     }
 
-                    if (data.stocks && data.stocks.length > 0) {
-                        await posDb.stocks.clear();
-                        await posDb.stocks.bulkPut(data.stocks);
+                    if (data.tables?.length > 0) {
+                        this.tables = data.tables;
+                    }
+
+                    if (data.active_shift) {
+                        this.activeShift = data.active_shift;
                     }
                 }
             } catch (err) {
@@ -148,7 +206,47 @@ export function posTerminal() {
             }
         },
 
-        // Filter produk berdasarkan kategori dan pencarian
+        // Pengaturan Multi-Pricing Ojol (+20% otomatis untuk Grab, GoFood, ShopeeFood)
+        get priceMultiplier() {
+            if (this.orderType === 'GOFOOD' || this.orderType === 'GRABFOOD' || this.orderType === 'SHOPEEFOOD') {
+                return 1.20; // Markup 20%
+            }
+            return 1.0;
+        },
+
+        // Hitung harga dinamis per produk sesuai saluran order
+        getProductPrice(product) {
+            const basePrice = parseFloat(product.selling_price) || 0;
+            if (this.priceMultiplier === 1.0) return basePrice;
+            // Dibulatkan ke kelipatan 500 rupiah terdekat agar praktis
+            return Math.round((basePrice * this.priceMultiplier) / 500) * 500;
+        },
+
+        // Ganti tipe order (Dine In, Takeaway, Ojol) & sesuaikan harga cart
+        setOrderType(type) {
+            this.orderType = type;
+            // Jika beralih dari dine in, kosongkan meja
+            if (type !== 'DINE_IN') {
+                this.selectedTableId = '';
+                this.selectedTableName = '';
+            }
+            // Recalculate harga tiap item di keranjang
+            this.cart.forEach(item => {
+                const prod = this.products.find(p => p.id === item.product_id);
+                if (prod) {
+                    item.unit_price = this.getProductPrice(prod);
+                    item.subtotal = item.unit_price * item.quantity;
+                }
+            });
+        },
+
+        // Pilih Meja
+        selectTable(table) {
+            this.selectedTableId = table.id;
+            this.selectedTableName = table.name;
+        },
+
+        // Filter produk berdasarkan kategori, pencarian & stok
         get filteredProducts() {
             return this.products.filter(product => {
                 const matchCategory = this.activeCategory === 'ALL' || product.category_id === this.activeCategory;
@@ -159,9 +257,22 @@ export function posTerminal() {
             });
         },
 
+        // Cek ketersediaan stok
+        isProductOutOfStock(product) {
+            if (!product.track_stock) return false;
+            return (Number(product.current_stock) || 0) <= 0;
+        },
+
         // Tambah item ke keranjang (0ms latency, client-side)
         addToCart(product) {
+            if (this.isProductOutOfStock(product)) {
+                alert(`Menu "${product.name}" sedang habis (Out of Stock)!`);
+                return;
+            }
+
+            const currentPrice = this.getProductPrice(product);
             const existingIndex = this.cart.findIndex(item => item.product_id === product.id);
+
             if (existingIndex > -1) {
                 this.cart[existingIndex].quantity += 1;
                 this.cart[existingIndex].subtotal = this.cart[existingIndex].quantity * this.cart[existingIndex].unit_price;
@@ -169,17 +280,17 @@ export function posTerminal() {
                 this.cart.push({
                     product_id: product.id,
                     name: product.name,
-                    unit_price: parseFloat(product.selling_price),
+                    unit_price: currentPrice,
                     cogs: parseFloat(product.cogs || 0),
                     quantity: 1,
-                    subtotal: parseFloat(product.selling_price),
+                    subtotal: currentPrice,
                     notes: '',
                     recipes: product.recipes || []
                 });
             }
         },
 
-        // Ubah jumlah item
+        // Ubah kuantitas item
         updateQuantity(index, delta) {
             this.cart[index].quantity += delta;
             if (this.cart[index].quantity <= 0) {
@@ -189,7 +300,7 @@ export function posTerminal() {
             }
         },
 
-        // Perhitungan total
+        // Perhitungan subtotal, PPN, dan grand total
         get subtotal() {
             return this.cart.reduce((sum, item) => sum + item.subtotal, 0);
         },
@@ -203,44 +314,272 @@ export function posTerminal() {
             return Math.max(0, this.subtotal - this.discount + this.taxAmount);
         },
 
+        // Perhitungan kembalian tunai & multi-payment
         get changeDue() {
             if (this.selectedPaymentMethod === 'CASH') {
                 return Math.max(0, this.cashGiven - this.finalTotal);
+            } else if (this.selectedPaymentMethod === 'MULTI') {
+                const totalPaid = (Number(this.multiCashAmount) || 0) + (Number(this.multiNonCashAmount) || 0);
+                return Math.max(0, totalPaid - this.finalTotal);
             }
             return 0;
         },
 
+        get totalMultiPaid() {
+            return (Number(this.multiCashAmount) || 0) + (Number(this.multiNonCashAmount) || 0);
+        },
+
+        get remainingMultiDue() {
+            return Math.max(0, this.finalTotal - this.totalMultiPaid);
+        },
+
+        // Format angka titik ribuan untuk input
         get formattedCashGiven() {
-            return this.cashGiven ? Number(this.cashGiven).toLocaleString('id-ID') : '';
+            return formatThousand(this.cashGiven);
         },
-
         setFormattedCashGiven(val) {
-            const clean = String(val).replace(/\D/g, '');
-            this.cashGiven = clean ? parseInt(clean, 10) : 0;
+            this.cashGiven = parseThousand(val);
         },
 
-        // Selesaikan pesanan (Checkout Offline-First & Direct Cloud Sync)
+        get formattedMultiCash() {
+            return formatThousand(this.multiCashAmount);
+        },
+        setFormattedMultiCash(val) {
+            this.multiCashAmount = parseThousand(val);
+        },
+
+        get formattedMultiNonCash() {
+            return formatThousand(this.multiNonCashAmount);
+        },
+        setFormattedMultiNonCash(val) {
+            this.multiNonCashAmount = parseThousand(val);
+        },
+
+        get formattedStartCash() {
+            return formatThousand(this.startCash);
+        },
+        setFormattedStartCash(val) {
+            this.startCash = parseThousand(val);
+        },
+
+        get formattedPettyCash() {
+            return formatThousand(this.pettyCashAmount);
+        },
+        setFormattedPettyCash(val) {
+            this.pettyCashAmount = parseThousand(val);
+        },
+
+        get formattedActualCash() {
+            return formatThousand(this.actualCash);
+        },
+        setFormattedActualCash(val) {
+            this.actualCash = parseThousand(val);
+        },
+
+        // Buka modal bayar
+        openPaymentModal() {
+            this.paymentModalOpen = true;
+            this.cashGiven = this.finalTotal;
+            this.multiCashAmount = 0;
+            this.multiNonCashAmount = this.finalTotal;
+        },
+
+        // ----------------------------------------------------
+        // OPEN BILL (HOLD ORDER & RESUME)
+        // ----------------------------------------------------
+
+        // Simpan pesanan ke daftar Open Bill (Makan Dulu Bayar Nanti)
+        async holdCurrentOrder() {
+            if (this.cart.length === 0 || this.isHoldingOrder) return;
+            this.isHoldingOrder = true;
+
+            const orderId = this.currentOpenBillId || crypto.randomUUID();
+            const orderNumber = `HOLD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+            const labelPelanggan = this.orderType === 'DINE_IN' 
+                ? (this.selectedTableName || (this.customerName || 'Dine-In')) 
+                : (this.customerName || this.orderType);
+
+            const payload = {
+                id: orderId,
+                tenant_id: window.POS_CONFIG?.tenantId || null,
+                outlet_id: window.POS_CONFIG?.outletId || null,
+                table_id: this.orderType === 'DINE_IN' ? this.selectedTableId || null : null,
+                customer_name: labelPelanggan + ' [' + this.orderType + ']',
+                discount_amount: this.discount,
+                tax_amount: this.taxAmount,
+                items: this.cart.map(item => ({
+                    product_id: item.product_id,
+                    name: item.name,
+                    quantity: item.quantity,
+                    unit_price: item.unit_price,
+                    unit_cost: item.cogs,
+                    subtotal: item.subtotal,
+                    notes: item.notes || null,
+                }))
+            };
+
+            try {
+                if (this.isOnline) {
+                    const res = await fetch('/api/pos/hold-order', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        // Update status meja jika dine in
+                        if (payload.table_id) {
+                            const tbl = this.tables.find(t => t.id === payload.table_id);
+                            if (tbl) tbl.is_occupied = true;
+                        }
+                        await this.fetchOpenBills();
+                    }
+                }
+
+                // Cetak tiket dapur (KOT) agar koki segera memasak
+                this.printKitchenTicket({
+                    order_number: orderNumber,
+                    table_name: this.selectedTableName || labelPelanggan,
+                    order_type: this.orderType,
+                    items: this.cart,
+                    created_at: new Date()
+                });
+
+                // Reset keranjang untuk melayani antrean berikutnya
+                this.cart = [];
+                this.currentOpenBillId = null;
+                this.customerName = '';
+                this.selectedTableId = '';
+                this.selectedTableName = '';
+                this.mobileCartOpen = false;
+
+                alert(`Pesanan ${labelPelanggan} berhasil disimpan sebagai Open Bill!`);
+            } catch (e) {
+                console.error('Gagal hold order:', e);
+                alert('Gagal menyimpan pesanan: ' + e.message);
+            } finally {
+                this.isHoldingOrder = false;
+            }
+        },
+
+        // Ambil daftar Open Bill aktif dari server
+        async fetchOpenBills() {
+            try {
+                const outletId = window.POS_CONFIG?.outletId || '';
+                const res = await fetch(`/api/pos/open-bills?outlet_id=${outletId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    this.openBills = data.data || [];
+                }
+            } catch (e) {
+                console.warn('Gagal fetch open bills:', e);
+            }
+        },
+
+        // Panggil kembali tagihan Open Bill ke keranjang kasir
+        resumeOpenBill(bill) {
+            this.currentOpenBillId = bill.id;
+            this.selectedTableId = bill.table_id || '';
+            this.selectedTableName = bill.table?.name || '';
+            this.customerName = bill.customer_name || '';
+            this.discount = parseFloat(bill.discount_amount || 0);
+
+            // Tentukan tipe order
+            if (bill.customer_name?.includes('GOFOOD')) this.orderType = 'GOFOOD';
+            else if (bill.customer_name?.includes('GRABFOOD')) this.orderType = 'GRABFOOD';
+            else if (bill.customer_name?.includes('SHOPEEFOOD')) this.orderType = 'SHOPEEFOOD';
+            else if (bill.customer_name?.includes('TAKE_AWAY') || bill.customer_name?.includes('Bungkus')) this.orderType = 'TAKE_AWAY';
+            else this.orderType = 'DINE_IN';
+
+            // Masukkan item ke keranjang
+            this.cart = (bill.items || []).map(item => ({
+                product_id: item.product_id,
+                name: item.product?.name || item.name || 'Menu',
+                unit_price: parseFloat(item.unit_price),
+                cogs: parseFloat(item.unit_cost || 0),
+                quantity: parseInt(item.quantity, 10),
+                subtotal: parseFloat(item.subtotal),
+                notes: item.notes || '',
+                recipes: item.product?.recipes || []
+            }));
+
+            this.openBillsModalOpen = false;
+        },
+
+        // ----------------------------------------------------
+        // CHECKOUT & MULTI-PAYMENT
+        // ----------------------------------------------------
+
         async processCheckout() {
             if (this.cart.length === 0 || this.isProcessingCheckout) return;
-            this.isProcessingCheckout = true;
 
-            const orderId = crypto.randomUUID();
+            // Validasi kecukupan pembayaran
+            if (this.selectedPaymentMethod === 'CASH' && this.cashGiven < this.finalTotal) {
+                alert('Uang tunai yang diterima kurang dari total tagihan!');
+                return;
+            }
+            if (this.selectedPaymentMethod === 'MULTI' && this.totalMultiPaid < this.finalTotal) {
+                alert('Total kombinasi pembayaran (Tunai + Non-Tunai) kurang dari total tagihan!');
+                return;
+            }
+
+            this.isProcessingCheckout = true;
+            const orderId = this.currentOpenBillId || crypto.randomUUID();
             const now = new Date().toISOString();
             const orderNumber = `POS-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+            const labelPelanggan = this.orderType === 'DINE_IN' 
+                ? (this.selectedTableName || (this.customerName || 'Dine-In')) 
+                : (this.customerName || this.orderType);
+
+            // Susun payload pembayaran tunggal atau multi-payment
+            let paymentPayload = null;
+            let paymentsPayload = null;
+
+            if (this.selectedPaymentMethod === 'MULTI') {
+                paymentsPayload = [
+                    {
+                        method: 'CASH',
+                        amount: parseFloat(this.multiCashAmount),
+                        status: 'SETTLED',
+                        paid_at: now
+                    },
+                    {
+                        method: this.multiNonCashMethod,
+                        amount: parseFloat(this.multiNonCashAmount),
+                        status: 'SETTLED',
+                        paid_at: now
+                    }
+                ];
+            } else {
+                paymentPayload = {
+                    method: this.selectedPaymentMethod,
+                    amount: this.finalTotal,
+                    status: 'SETTLED',
+                    paid_at: now
+                };
+            }
 
             const orderPayload = {
                 id: orderId,
                 tenant_id: window.POS_CONFIG?.tenantId || null,
                 outlet_id: window.POS_CONFIG?.outletId || null,
-                shift_id: window.POS_CONFIG?.shiftId || null,
+                shift_id: this.activeShift?.id || window.POS_CONFIG?.shiftId || null,
                 user_id: window.POS_CONFIG?.userId || null,
+                table_id: this.orderType === 'DINE_IN' ? this.selectedTableId || null : null,
                 order_number: orderNumber,
                 status: 'PAID',
                 total_amount: this.subtotal,
                 discount_amount: this.discount,
                 tax_amount: this.taxAmount,
                 final_amount: this.finalTotal,
-                customer_name: this.customerName ? (this.customerName + ' [' + this.orderType + ']') : ('[' + this.orderType + ']'),
+                customer_name: labelPelanggan + ' [' + this.orderType + ']',
                 customer_phone: this.customerPhone || null,
                 items: this.cart.map(item => ({
                     product_id: item.product_id,
@@ -251,65 +590,243 @@ export function posTerminal() {
                     subtotal: item.subtotal,
                     notes: item.notes || null,
                 })),
-                payment: {
-                    method: this.selectedPaymentMethod,
-                    amount: this.finalTotal,
-                    status: 'SETTLED',
-                    paid_at: now
-                },
+                payment: paymentPayload,
+                payments: paymentsPayload,
                 sync_status: 'PENDING_SYNC',
                 created_at: now,
             };
 
-            // 1. Simpan ke IndexedDB lokal
-            await posDb.orders.put(orderPayload);
-            await posDb.sync_queue.add({
-                entity_type: 'ORDER',
-                payload: orderPayload,
-                created_at: Date.now(),
-                retry_count: 0
-            });
+            try {
+                // 1. Simpan ke IndexedDB lokal (Offline-First)
+                await posDb.orders.put(orderPayload);
+                await posDb.sync_queue.add({
+                    entity_type: 'ORDER',
+                    payload: orderPayload,
+                    created_at: Date.now(),
+                    retry_count: 0
+                });
 
-            // 2. Potong stok lokal secara optimis (BOM Recipe)
-            for (const item of this.cart) {
-                if (item.recipes && item.recipes.length > 0) {
-                    for (const recipe of item.recipes) {
-                        const localStock = await posDb.stocks.get(recipe.raw_material_id);
-                        if (localStock) {
-                            localStock.current_stock -= (item.quantity * parseFloat(recipe.quantity));
-                            await posDb.stocks.put(localStock);
+                // 2. Jika merupakan pelunasan Open Bill dan online, panggil settle API
+                if (this.currentOpenBillId && this.isOnline) {
+                    await fetch(`/api/pos/open-bills/${this.currentOpenBillId}/settle`, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                        },
+                        body: JSON.stringify({
+                            payment: paymentPayload,
+                            payments: paymentsPayload
+                        })
+                    });
+                    await this.fetchOpenBills();
+                }
+
+                // 3. Potong stok bahan baku lokal secara optimis (BOM)
+                for (const item of this.cart) {
+                    if (item.recipes?.length > 0) {
+                        for (const recipe of item.recipes) {
+                            const localStock = await posDb.stocks.get(recipe.raw_material_id);
+                            if (localStock) {
+                                localStock.current_stock -= (item.quantity * parseFloat(recipe.quantity));
+                                await posDb.stocks.put(localStock);
+                            }
                         }
                     }
                 }
-            }
 
-            // 3. Picu cetak struk jika modul thermal printer siap
-            if (window.thermalPrinter && window.thermalPrinter.isConnected) {
-                window.thermalPrinter.printReceipt(orderPayload);
-            }
+                // 4. Sinkronisasikan ke backend Laravel jika online
+                if (this.isOnline && !this.currentOpenBillId) {
+                    await this.syncOfflineQueue();
+                }
 
-            // 4. Sinkronisasikan secara sinkron (await) ke cloud backend saat online
-            if (this.isOnline) {
-                await this.syncOfflineQueue();
-            }
+                // Bebaskan meja jika dine in
+                if (orderPayload.table_id) {
+                    const tbl = this.tables.find(t => t.id === orderPayload.table_id);
+                    if (tbl) tbl.is_occupied = false;
+                }
 
-            // 5. Tampilkan Modal Sukses Transaksi
-            this.completedOrder = {
-                ...orderPayload,
-                changeDue: this.changeDue,
-                cashGiven: this.cashGiven
+                // 5. Tampilkan Modal Sukses Transaksi
+                this.completedOrder = {
+                    ...orderPayload,
+                    changeDue: this.changeDue,
+                    cashGiven: this.selectedPaymentMethod === 'CASH' ? this.cashGiven : this.totalMultiPaid
+                };
+
+                // Otomatis cetak struk via bluetooth jika printer siap
+                if (window.thermalPrinter?.isConnected) {
+                    window.thermalPrinter.printReceipt(this.completedOrder);
+                }
+
+                // Reset state transaksi
+                this.cart = [];
+                this.discount = 0;
+                this.cashGiven = 0;
+                this.multiCashAmount = 0;
+                this.multiNonCashAmount = 0;
+                this.currentOpenBillId = null;
+                this.customerName = '';
+                this.selectedTableId = '';
+                this.selectedTableName = '';
+                this.paymentModalOpen = false;
+                this.mobileCartOpen = false;
+                this.successModalOpen = true;
+
+            } catch (err) {
+                console.error('Gagal menyelesaikan pembayaran:', err);
+                alert('Terjadi kesalahan saat memproses pembayaran: ' + err.message);
+            } finally {
+                this.isProcessingCheckout = false;
+            }
+        },
+
+        // ----------------------------------------------------
+        // KITCHEN ORDER TICKET (KOT)
+        // ----------------------------------------------------
+
+        printKitchenTicket(orderData) {
+            const kotData = orderData || {
+                order_number: this.completedOrder?.order_number || 'KOT-' + Math.floor(Math.random() * 9000 + 1000),
+                table_name: this.selectedTableName || this.customerName || this.orderType,
+                order_type: this.orderType,
+                items: this.cart.length > 0 ? this.cart : (this.completedOrder?.items || []),
+                created_at: new Date()
             };
 
-            // Bersihkan form & cart
-            this.cart = [];
-            this.discount = 0;
-            this.cashGiven = 0;
-            this.customerName = '';
-            this.customerPhone = '';
-            this.paymentModalOpen = false;
-            this.mobileCartOpen = false;
-            this.isProcessingCheckout = false;
-            this.successModalOpen = true;
+            // Set data KOT sementara ke state window agar DOM KOT terupdate
+            window.KOT_TEMP_DATA = kotData;
+            if (window.thermalPrinter) {
+                window.thermalPrinter.printKitchenTicket(kotData);
+            } else {
+                window.print();
+            }
+        },
+
+        // ----------------------------------------------------
+        // MANAJEMEN SHIFT & PETTY CASH
+        // ----------------------------------------------------
+
+        // Buka Shift Kasir Baru
+        async startShift() {
+            if (this.startCash < 0) {
+                alert('Modal awal tidak boleh negatif!');
+                return;
+            }
+
+            try {
+                const outletId = window.POS_CONFIG?.outletId || '';
+                const res = await fetch('/api/pos/shifts/start', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                    },
+                    body: JSON.stringify({
+                        outlet_id: outletId,
+                        start_cash: this.startCash,
+                        notes: this.startCashNotes
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    this.activeShift = data.shift;
+                    this.startShiftModalOpen = false;
+                    alert('Shift kasir berhasil dibuka dengan modal awal Rp' + formatThousand(this.startCash));
+                } else {
+                    const err = await res.json();
+                    alert('Gagal buka shift: ' + (err.message || 'Kesalahan server'));
+                }
+            } catch (e) {
+                alert('Gagal membuka shift kasir: ' + e.message);
+            }
+        },
+
+        // Catat Petty Cash Out (Kas Keluar)
+        async recordPettyCash() {
+            if (this.pettyCashAmount <= 0) {
+                alert('Masukkan nominal pengeluaran kas kecil!');
+                return;
+            }
+            if (!this.pettyCashReason.trim()) {
+                alert('Masukkan alasan / keterangan pengeluaran kas!');
+                return;
+            }
+            if (!this.activeShift?.id) {
+                alert('Shift kasir belum aktif!');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/pos/shifts/petty-cash', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                    },
+                    body: JSON.stringify({
+                        shift_id: this.activeShift.id,
+                        amount: this.pettyCashAmount,
+                        reason: this.pettyCashReason
+                    })
+                });
+
+                if (res.ok) {
+                    alert(`Kas keluar Rp${formatThousand(this.pettyCashAmount)} (${this.pettyCashReason}) berhasil dicatat.`);
+                    this.pettyCashAmount = 0;
+                    this.pettyCashReason = '';
+                    this.pettyCashModalOpen = false;
+                } else {
+                    const err = await res.json();
+                    alert('Gagal mencatat kas keluar: ' + (err.message || 'Kesalahan server'));
+                }
+            } catch (e) {
+                alert('Gagal mencatat kas kecil: ' + e.message);
+            }
+        },
+
+        // Tutup Shift Kasir (Blind Close)
+        async closeShift() {
+            if (this.actualCash < 0) {
+                alert('Masukkan jumlah uang fisik aktual di laci!');
+                return;
+            }
+            if (!this.activeShift?.id) {
+                alert('Shift kasir belum aktif!');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/pos/shifts/close', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                    },
+                    body: JSON.stringify({
+                        shift_id: this.activeShift.id,
+                        actual_cash: this.actualCash,
+                        notes: this.closeShiftNotes
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    this.shiftReport = data.shift;
+                    this.activeShift = null;
+                    this.closeShiftModalOpen = false;
+                    this.shiftSummaryModalOpen = true;
+                } else {
+                    const err = await res.json();
+                    alert('Gagal menutup shift: ' + (err.message || 'Kesalahan server'));
+                }
+            } catch (e) {
+                alert('Gagal menutup shift kasir: ' + e.message);
+            }
         },
 
         // Sinkronisasi antrean lokal ke API Laravel
@@ -341,8 +858,7 @@ export function posTerminal() {
 
                     if (response.ok) {
                         const res = await response.json();
-                        if (res.synced_ids && res.synced_ids.length > 0) {
-                            // Tandai order sebagai SYNCED di lokal dan hapus dari antrean
+                        if (res.synced_ids?.length > 0) {
                             for (const id of res.synced_ids) {
                                 const localOrder = await posDb.orders.get(id);
                                 if (localOrder) {

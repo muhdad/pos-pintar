@@ -197,6 +197,19 @@
 
             <!-- Page Body Content -->
             <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+                @if (session('status'))
+                    <div class="mb-4 p-3 rounded-[6px] bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-between">
+                        <span>{{ session('status') }}</span>
+                        <button type="button" onclick="this.parentElement.remove()" class="text-emerald-700 hover:text-emerald-900 font-bold">✕</button>
+                    </div>
+                @endif
+                @if (session('error'))
+                    <div class="mb-4 p-3 rounded-[6px] bg-red-50 border border-red-200 text-red-800 text-xs font-semibold flex items-center justify-between">
+                        <span>{{ session('error') }}</span>
+                        <button type="button" onclick="this.parentElement.remove()" class="text-red-700 hover:text-red-900 font-bold">✕</button>
+                    </div>
+                @endif
+
                 {{ $slot }}
             </main>
         </div>

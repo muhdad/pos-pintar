@@ -71,12 +71,27 @@ export class ThermalPrinter {
             return false;
         }
 
+        document.body.classList.remove('print-kot');
         if (this.isConnected && this.characteristic) {
             return await this.printRawEscPos(order);
         } else {
-            // Fallback cerdas: Cetak via print dialog browser (cocok untuk USB, WiFi, RawBT, atau driver thermal)
             return this.printBrowser(order);
         }
+    }
+
+    /**
+     * Cetak Tiket Pesanan Dapur (Kitchen Order Ticket - KOT)
+     * Hanya mencetak nomor meja, order, item & catatan tanpa harga.
+     */
+    async printKitchenTicket(order) {
+        document.body.classList.add('print-kot');
+        setTimeout(() => {
+            window.print();
+            setTimeout(() => {
+                document.body.classList.remove('print-kot');
+            }, 600);
+        }, 100);
+        return true;
     }
 
     /**

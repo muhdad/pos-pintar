@@ -6,16 +6,19 @@ use App\Http\Controllers\Pos\PosTerminalController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
-// Root Route: Direct to Login or Dashboard (Production Ready - No Landing Page)
+// Root Route: Direct to Login, Cashier POS, or Dashboard
 Route::get('/', function () {
     if (auth()->check()) {
+        if (auth()->user()->role === 'CASHIER') {
+            return redirect()->route('pos.index');
+        }
         return redirect()->route('dashboard');
     }
     return redirect()->route('login');
 });
 
-// Backoffice Routes (Protected by Auth)
-Route::middleware(['auth', 'verified'])->group(function () {
+// Backoffice Routes (Protected by Auth & RBAC: Superadmin, Owner, Manager Only)
+Route::middleware(['auth', 'verified', 'role:SUPERADMIN,OWNER,MANAGER'])->group(function () {
     Route::get('/dashboard', [BackofficeController::class, 'dashboard'])->name('dashboard');
 
     Route::prefix('backoffice')->name('backoffice.')->group(function () {
@@ -30,15 +33,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/categories/{category}', [BackofficeController::class, 'updateCategory'])->name('categories.update');
         Route::delete('/categories/{category}', [BackofficeController::class, 'destroyCategory'])->name('categories.destroy');
 
-        // Bahan Baku & Stok Gudang
+        // Bahan Baku, Stok Gudang & Stock Opname
         Route::get('/inventory', [BackofficeController::class, 'inventory'])->name('inventory');
         Route::post('/inventory/raw-material', [BackofficeController::class, 'storeRawMaterial'])->name('inventory.raw-material.store');
         Route::put('/inventory/raw-material/{rawMaterial}', [BackofficeController::class, 'updateRawMaterial'])->name('inventory.raw-material.update');
         Route::delete('/inventory/raw-material/{rawMaterial}', [BackofficeController::class, 'destroyRawMaterial'])->name('inventory.raw-material.destroy');
         Route::post('/inventory/restock', [BackofficeController::class, 'restockInventory'])->name('inventory.restock');
+        Route::post('/inventory/opname', [BackofficeController::class, 'recordOpname'])->name('inventory.opname');
 
-        // Riwayat Transaksi & AI
+        // Riwayat Transaksi, Export CSV & Void
         Route::get('/orders', [BackofficeController::class, 'orders'])->name('orders');
+        Route::get('/orders/export-csv', [BackofficeController::class, 'exportOrdersCsv'])->name('orders.export-csv');
+        Route::post('/orders/{order}/void', [BackofficeController::class, 'voidOrderBackoffice'])->name('orders.void');
+
+        // AI Business Consultant
         Route::get('/ai-consultant', [BackofficeController::class, 'aiConsultant'])->name('ai-consultant');
         Route::post('/ai-consultant/generate', [BackofficeController::class, 'triggerAiReport'])->name('ai-consultant.generate');
 

@@ -138,6 +138,44 @@
                     </div>
                 </div>
 
+                <!-- Grafik Jam Sibuk Resto (Peak Hours Distribution) -->
+                <div class="bg-white rounded-[10px] border border-[#E7E0D8] p-4">
+                    <div class="flex items-center justify-between pb-2.5 border-b border-stone-100 mb-3">
+                        <div>
+                            <h3 class="text-xs font-display font-bold text-stone-900 uppercase tracking-wide">Grafik Jam Sibuk Resto (Peak Hours)</h3>
+                            <span class="text-[11px] text-stone-500">Distribusi omzet per jam operasional hari ini (08:00 - 22:00)</span>
+                        </div>
+                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-[4px] bg-amber-50 text-amber-800 border border-amber-200">Real-Time</span>
+                    </div>
+
+                    @php
+                        $maxHourlySales = !empty($hourlyDistribution) ? max($hourlyDistribution) : 1;
+                        if ($maxHourlySales <= 0) $maxHourlySales = 1;
+                    @endphp
+
+                    <div class="flex items-end gap-1.5 h-32 pt-4 px-1 pb-1 border-b border-stone-200">
+                        @foreach($hourlyDistribution as $hour => $sales)
+                            @php
+                                $barHeightPct = max(6, round(($sales / $maxHourlySales) * 100));
+                                $isPeak = $sales > 0 && $sales >= ($maxHourlySales * 0.7);
+                            @endphp
+                            <div class="flex-1 flex flex-col items-center justify-end h-full group relative">
+                                <div class="hidden group-hover:block absolute bottom-full mb-1 z-20 bg-stone-900 text-white text-[10px] py-1 px-1.5 rounded-[4px] whitespace-nowrap shadow-subtle pointer-events-none font-mono">
+                                    <span class="font-bold">{{ $hour }}</span>: Rp{{ number_format($sales, 0, ',', '.') }}
+                                </div>
+                                <div class="w-full rounded-t-[3px] transition-all duration-300 {{ $isPeak ? 'bg-[#EA580C]' : ($sales > 0 ? 'bg-[#5B0A14]' : 'bg-stone-200') }}"
+                                     style="height: {{ $barHeightPct }}%"></div>
+                            </div>
+                        @endforeach
+                    </div>
+                    <div class="flex justify-between items-center text-[9px] text-stone-400 font-mono mt-1.5 px-0.5">
+                        <span>08:00</span>
+                        <span>12:00 (Makan Siang)</span>
+                        <span>18:00 (Makan Malam)</span>
+                        <span>22:00</span>
+                    </div>
+                </div>
+
                 <!-- Recent Transactions Table -->
                 <div class="bg-white rounded-[10px] border border-[#E7E0D8] overflow-hidden">
                     <div class="p-4 border-b border-[#E7E0D8] flex items-center justify-between bg-[#FAF6F0]/40">

@@ -15,16 +15,21 @@ use App\Models\StockMovement;
 use App\Models\Tenant;
 use App\Services\Ai\AiConsultantService;
 use App\Services\Ai\BusinessDataAggregator;
+use App\Services\Pos\InventoryDeductionService;
+use App\Services\Pos\OrderService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class BackofficeController extends Controller
 {
     public function __construct(
         protected BusinessDataAggregator $aggregator,
-        protected AiConsultantService $consultantService
+        protected AiConsultantService $consultantService,
+        protected OrderService $orderService,
+        protected InventoryDeductionService $inventoryService
     ) {}
 
     /**
@@ -67,6 +72,26 @@ class BackofficeController extends Controller
         $totalProductsCount = Product::where('tenant_id', $tenant->id)->count();
         $totalRawMaterialsCount = RawMaterial::where('tenant_id', $tenant->id)->count();
 
+        // Distribusi penjualan per jam hari ini (Peak Hours 08:00 - 22:00)
+        $hourlyDistribution = [];
+        for ($h = 8; $h <= 22; $h++) {
+            $hourStr = sprintf('%02d:00', $h);
+            $hourlyDistribution[$hourStr] = 0;
+        }
+
+        $ordersToday = Order::where('tenant_id', $tenant->id)
+            ->whereDate('created_at', $todayStr)
+            ->where('status', 'PAID')
+            ->get(['final_amount', 'created_at']);
+
+        foreach ($ordersToday as $ord) {
+            $h = (int) $ord->created_at->format('H');
+            if ($h >= 8 && $h <= 22) {
+                $hourStr = sprintf('%02d:00', $h);
+                $hourlyDistribution[$hourStr] += (float) $ord->final_amount;
+            }
+        }
+
         return view('dashboard', compact(
             'tenant',
             'outlet',
@@ -75,7 +100,8 @@ class BackofficeController extends Controller
             'recentOrders',
             'lowStockItems',
             'totalProductsCount',
-            'totalRawMaterialsCount'
+            'totalRawMaterialsCount',
+            'hourlyDistribution'
         ));
     }
 
@@ -513,5 +539,126 @@ class BackofficeController extends Controller
         $this->consultantService->generateDailyReport($tenant->id, null, date('Y-m-d'));
 
         return back()->with('status', 'Insight bisnis AI berhasil diperbarui!');
+    }
+
+    /**
+     * Ekspor Laporan Riwayat Transaksi ke format CSV / Excel.
+     */
+    public function exportOrdersCsv(Request $request): StreamedResponse
+    {
+        $tenant = $request->user()?->tenant ?? Tenant::first();
+
+        $query = Order::where('tenant_id', $tenant->id)
+            ->with(['items.product', 'user', 'payments', 'table'])
+            ->latest();
+
+        if ($status = $request->input('status')) {
+            $query->where('status', $status);
+        }
+
+        if ($startDate = $request->input('start_date')) {
+            $query->whereDate('created_at', '>=', $startDate);
+        }
+
+        if ($endDate = $request->input('end_date')) {
+            $query->whereDate('created_at', '<=', $endDate);
+        }
+
+        $orders = $query->get();
+        $filename = "laporan-penjualan-pos-" . date('Ymd-His') . ".csv";
+
+        return response()->stream(function () use ($orders) {
+            $handle = fopen('php://output', 'w');
+
+            // Tulis BOM UTF-8 agar karakter Rupiah dan aksen tampil sempurna di Microsoft Excel
+            fputs($handle, "\xEF\xBB\xBF");
+
+            // Header kolom CSV
+            fputcsv($handle, [
+                'No. Struk',
+                'Tanggal & Waktu',
+                'Kasir',
+                'Meja / Pelanggan',
+                'Status Transaksi',
+                'Jumlah Item',
+                'Daftar Menu & Qty',
+                'Subtotal (Rp)',
+                'Diskon (Rp)',
+                'PPN 11% (Rp)',
+                'Total Akhir (Rp)',
+                'Metode Pembayaran',
+                'Catatan',
+            ]);
+
+            foreach ($orders as $order) {
+                $itemsSummary = $order->items->map(function ($it) {
+                    $itemText = "{$it->quantity}x " . ($it->product->name ?? 'Menu');
+                    if ($it->notes) {
+                        $itemText .= " ({$it->notes})";
+                    }
+                    return $itemText;
+                })->join('; ');
+
+                $paymentMethods = $order->payments->pluck('method')->join(', ') ?: 'CASH';
+
+                fputcsv($handle, [
+                    $order->order_number,
+                    $order->created_at->format('Y-m-d H:i:s'),
+                    $order->user->name ?? 'Kasir',
+                    $order->table ? $order->table->name : ($order->customer_name ?? 'Pelanggan'),
+                    $order->status,
+                    $order->items->sum('quantity'),
+                    $itemsSummary,
+                    $order->total_amount,
+                    $order->discount_amount,
+                    $order->tax_amount,
+                    $order->final_amount,
+                    $paymentMethods,
+                    $order->customer_name ?? '',
+                ]);
+            }
+
+            fclose($handle);
+        }, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
+    }
+
+    /**
+     * Pembatalan (Void) transaksi dari Backoffice dengan audit log dan reversal stok.
+     */
+    public function voidOrderBackoffice(Request $request, Order $order): RedirectResponse
+    {
+        $validated = $request->validate([
+            'reason' => 'required|string|max:255',
+        ]);
+
+        $this->orderService->voidOrder($order->id, auth()->id(), $validated['reason']);
+
+        return back()->with('status', "Pesanan #{$order->order_number} berhasil dibatalkan (VOID) dan stok bahan telah dikembalikan.");
+    }
+
+    /**
+     * Catat Penyesuaian Fisik Stok Gudang (Stock Opname).
+     */
+    public function recordOpname(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'outlet_stock_id' => 'required|exists:outlet_stocks,id',
+            'physical_stock' => 'required|numeric|min:0',
+            'notes' => 'required|string|max:255',
+        ]);
+
+        $outletStock = OutletStock::with('rawMaterial')->findOrFail($validated['outlet_stock_id']);
+
+        $this->inventoryService->recordOpnameAdjustment(
+            $outletStock->outlet_id,
+            $outletStock->raw_material_id,
+            (float) $validated['physical_stock'],
+            $validated['notes']
+        );
+
+        return back()->with('status', "Stock Opname bahan {$outletStock->rawMaterial->name} berhasil diperbarui menjadi {$validated['physical_stock']} {$outletStock->rawMaterial->unit}!");
     }
 }

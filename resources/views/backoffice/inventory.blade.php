@@ -25,6 +25,7 @@
     <div x-data="{
         materialModalOpen: false,
         restockModalOpen: false,
+        opnameModalOpen: false,
         editMaterialModalOpen: false,
         editingMaterial: {
             id: '',
@@ -55,6 +56,15 @@
                 <p class="text-xs text-stone-500 mt-0.5">Monitoring kuantitas bahan baku riil, restock nota faktur, dan audit mutasi stok resep.</p>
             </div>
             <div class="flex items-center gap-2">
+                <button type="button" 
+                        @click="opnameModalOpen = true"
+                        class="px-3 py-1.5 rounded-[6px] bg-white border border-amber-300 text-amber-900 hover:bg-amber-50 font-semibold text-xs transition flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    <span>Stock Opname</span>
+                </button>
+
                 <button type="button" 
                         @click="restockModalOpen = true"
                         class="px-3 py-1.5 rounded-[6px] bg-white border border-[#E7E0D8] text-stone-700 hover:bg-stone-50 font-semibold text-xs transition flex items-center gap-1.5">
@@ -341,6 +351,59 @@
                         <div class="pt-2 flex justify-end gap-2">
                             <button type="button" @click="restockModalOpen = false" class="px-3 py-1.5 rounded-[6px] bg-stone-100 text-stone-600 text-xs font-medium hover:bg-stone-200 transition">Batal</button>
                             <button type="submit" class="px-3.5 py-1.5 rounded-[6px] bg-[#EA580C] hover:bg-[#D94E07] text-white text-xs font-bold transition">Tambah Stok</button>
+                        </div>
+                    </form>
+                @endif
+            </div>
+        </div>
+
+        <!-- Stock Opname Modal -->
+        <div x-show="opnameModalOpen" 
+             class="fixed inset-0 bg-stone-900/50 z-50 flex items-center justify-center p-4" 
+             x-cloak>
+            <div class="bg-white rounded-[10px] max-w-sm w-full p-5 border border-[#E7E0D8] shadow-modal animate-in fade-in duration-150"
+                 @click.outside="opnameModalOpen = false">
+                <div class="flex items-center justify-between pb-2.5 border-b border-stone-100">
+                    <div>
+                        <h3 class="text-xs font-display font-bold text-stone-900 uppercase tracking-wide">Stock Opname Fisik Gudang</h3>
+                        <p class="text-[10px] text-stone-500">Koreksi dan penyesuaian stok riil dengan pembukuan sistem.</p>
+                    </div>
+                    <button type="button" @click="opnameModalOpen = false" class="text-stone-400 hover:text-stone-700 font-bold p-1">✕</button>
+                </div>
+
+                @if($rawMaterials->isEmpty())
+                    <div class="mt-3 p-3 rounded-[6px] bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+                        Belum ada bahan baku terdaftar untuk opname.
+                    </div>
+                @else
+                    <form method="POST" action="{{ route('backoffice.inventory.opname') }}" class="mt-3 space-y-3">
+                        @csrf
+                        <div>
+                            <label class="block text-xs font-semibold text-stone-700 mb-1">Pilih Bahan Baku <span class="text-red-500">*</span></label>
+                            <select name="raw_material_id" required class="w-full bg-white border border-[#E7E0D8] rounded-[6px] px-2.5 py-1.5 text-xs text-stone-900 focus:outline-none focus:ring-1 focus:ring-[#EA580C]">
+                                @foreach($rawMaterials as $mat)
+                                    @php
+                                        $stockNow = (float) ($mat->outletStocks->first()->current_stock ?? 0);
+                                    @endphp
+                                    <option value="{{ $mat->id }}">{{ $mat->name }} (Sistem: {{ number_format($stockNow, 0, ',', '.') }} {{ $mat->unit }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-stone-700 mb-1">Hasil Hitung Fisik Aktual <span class="text-red-500">*</span></label>
+                            <input type="number" step="any" name="physical_stock" required min="0" placeholder="Contoh: 4500" class="w-full bg-white border border-[#E7E0D8] rounded-[6px] px-2.5 py-1.5 text-xs text-stone-900 font-mono tabular-nums font-bold focus:outline-none focus:ring-1 focus:ring-[#EA580C]">
+                            <span class="text-[10px] text-stone-400 mt-0.5 block">Sistem akan menghitung selisih dan mencatat kartu mutasi stok & audit log.</span>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-stone-700 mb-1">Alasan Penyesuaian / Keterangan <span class="text-red-500">*</span></label>
+                            <input type="text" name="notes" required placeholder="Contoh: Selisih tumpah saat racik / Opname akhir pekan" class="w-full bg-white border border-[#E7E0D8] rounded-[6px] px-2.5 py-1.5 text-xs text-stone-900 focus:outline-none focus:ring-1 focus:ring-[#EA580C]">
+                        </div>
+
+                        <div class="pt-2 flex justify-end gap-2">
+                            <button type="button" @click="opnameModalOpen = false" class="px-3 py-1.5 rounded-[6px] bg-stone-100 text-stone-600 text-xs font-medium hover:bg-stone-200 transition">Batal</button>
+                            <button type="submit" class="px-3.5 py-1.5 rounded-[6px] bg-[#5B0A14] hover:bg-[#7A0F1C] text-white text-xs font-bold transition">Simpan Opname</button>
                         </div>
                     </form>
                 @endif
