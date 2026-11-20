@@ -1,3 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+    --brand-maroon: #5B0A14;
+    --brand-maroon-dark: #4D0811;
+    --brand-orange: #F97316;
+    --brand-gold: #FFB800;
+    --brand-canvas: #FFF8F0;
+    --brand-border: #EFE7DE;
+}
+
+@layer base {
+    html {
+        font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    }
+
+    body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background-color: var(--brand-canvas);
+        color: #2D1E1B;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+    }
+}
+
+/* Custom Sleek Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #E5DDD5;
+    border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #D1C5B8;
+}
+
+/* Micro-interaction utilities */
+.tap-active {
+    transition: transform 0.12s ease-in-out, box-shadow 0.12s ease-in-out;
+}
+.tap-active:active {
+    transform: scale(0.97);
+}
+
+/* Thermal receipt printable mode */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #printable-receipt, #printable-receipt * {
+        visibility: visible;
+    }
+    #printable-receipt {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+}

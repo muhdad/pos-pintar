@@ -32,6 +32,7 @@ export function posTerminal() {
         cart: [],
         discount: 0,
         taxPercent: 11, // PPN 11%
+        orderType: 'DINE_IN', // DINE_IN, TAKE_AWAY, GOFOOD, GRABFOOD, SHOPEEFOOD
         paymentModalOpen: false,
         selectedPaymentMethod: 'CASH',
         cashGiven: 0,
@@ -46,6 +47,26 @@ export function posTerminal() {
 
         // Inisialisasi Terminal
         async init() {
+            // Keyboard shortcuts untuk kasir
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'F2') {
+                    e.preventDefault();
+                    if (this.cart.length > 0 && !this.paymentModalOpen) {
+                        this.paymentModalOpen = true;
+                        this.cashGiven = this.finalTotal;
+                    }
+                }
+                if (e.key === 'F3' || (e.key === '/' && document.activeElement.tagName !== 'INPUT')) {
+                    e.preventDefault();
+                    const searchInput = document.getElementById('pos-search-input');
+                    if (searchInput) searchInput.focus();
+                }
+                if (e.key === 'Escape') {
+                    if (this.paymentModalOpen) this.paymentModalOpen = false;
+                    if (this.successModalOpen) this.successModalOpen = false;
+                }
+            });
+
             // Listener status koneksi internet
             window.addEventListener('online', () => {
                 this.isOnline = true;
@@ -209,7 +230,7 @@ export function posTerminal() {
                 discount_amount: this.discount,
                 tax_amount: this.taxAmount,
                 final_amount: this.finalTotal,
-                customer_name: this.customerName || null,
+                customer_name: this.customerName ? (this.customerName + ' [' + this.orderType + ']') : ('[' + this.orderType + ']'),
                 customer_phone: this.customerPhone || null,
                 items: this.cart.map(item => ({
                     product_id: item.product_id,
