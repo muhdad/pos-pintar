@@ -138,16 +138,20 @@ export function posTerminal() {
             });
 
             // Inisialisasi katalog
-            if (window.POS_INITIAL_PRODUCTS && window.POS_INITIAL_PRODUCTS.length > 0) {
-                this.products = window.POS_INITIAL_PRODUCTS;
+            if (window.POS_INITIAL_PRODUCTS !== undefined) {
+                this.products = window.POS_INITIAL_PRODUCTS || [];
                 this.categories = window.POS_INITIAL_CATEGORIES || [];
                 try {
-                    await posDb.products.bulkPut(window.POS_INITIAL_PRODUCTS);
-                    if (window.POS_INITIAL_CATEGORIES && window.POS_INITIAL_CATEGORIES.length > 0) {
-                        await posDb.categories.bulkPut(window.POS_INITIAL_CATEGORIES);
+                    await posDb.products.clear();
+                    if (this.products.length > 0) {
+                        await posDb.products.bulkPut(this.products);
+                    }
+                    if (this.categories.length > 0) {
+                        await posDb.categories.clear();
+                        await posDb.categories.bulkPut(this.categories);
                     }
                 } catch (e) {
-                    console.warn('Gagal cache ke IndexedDB:', e);
+                    console.warn('Gagal sinkronisasi cache ke IndexedDB:', e);
                 }
             } else {
                 await this.loadLocalCatalog();

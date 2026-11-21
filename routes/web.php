@@ -50,6 +50,9 @@ Route::middleware(['auth', 'verified', 'role:SUPERADMIN,OWNER,MANAGER'])->group(
         Route::get('/ai-consultant', [BackofficeController::class, 'aiConsultant'])->name('ai-consultant');
         Route::post('/ai-consultant/generate', [BackofficeController::class, 'triggerAiReport'])->name('ai-consultant.generate');
 
+        // Reset Data Dummy
+        Route::post('/reset-dummy-data', [BackofficeController::class, 'resetDummyData'])->name('reset-dummy-data');
+
         // Manajemen Akun & Pengguna (Superadmin / Owner)
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');

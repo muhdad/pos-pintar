@@ -106,6 +106,19 @@
                 <p class="text-xs text-stone-500 mt-0.5">Kelola harga jual, perhitungan HPP resep otomatis, foto menu, dan kategori.</p>
             </div>
             <div class="flex items-center gap-2">
+                <!-- Kosongkan Data Dummy Button -->
+                <form method="POST" action="{{ route('backoffice.reset-dummy-data') }}" onsubmit="return confirm('PERINGATAN: Seluruh data dummy (produk, transaksi, bahan baku) akan dibersihkan untuk persiapan input data riil.\n\nApakah Anda yakin ingin melanjutkan?')">
+                    @csrf
+                    <button type="submit" 
+                            class="px-2.5 py-1.5 rounded-[6px] bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 font-semibold text-xs transition flex items-center gap-1.5"
+                            title="Kosongkan seluruh data dummy">
+                        <svg class="w-3.5 h-3.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        <span>Kosongkan Data Dummy</span>
+                    </button>
+                </form>
+
                 <!-- Tambah Kategori Button -->
                 <button type="button" 
                         @click="categoryModalOpen = true"

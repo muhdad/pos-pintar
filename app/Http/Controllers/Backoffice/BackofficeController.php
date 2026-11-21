@@ -661,4 +661,14 @@ class BackofficeController extends Controller
 
         return back()->with('status', "Stock Opname bahan {$outletStock->rawMaterial->name} berhasil diperbarui menjadi {$validated['physical_stock']} {$outletStock->rawMaterial->unit}!");
     }
+
+    /**
+     * Bersihkan Seluruh Data Dummy Sistem (Persiapan Input Data Riil).
+     */
+    public function resetDummyData(Request $request): RedirectResponse
+    {
+        \Illuminate\Support\Facades\Artisan::call('app:reset-dummy-data');
+
+        return redirect()->route('backoffice.products')->with('status', 'Seluruh data dummy berhasil dibersihkan! Katalog produk dan gudang kini bersih dan siap diisi data riil.');
+    }
 }
