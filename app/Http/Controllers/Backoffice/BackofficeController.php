@@ -20,6 +20,7 @@ use App\Services\Pos\OrderService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -670,5 +671,190 @@ class BackofficeController extends Controller
         \Illuminate\Support\Facades\Artisan::call('app:reset-dummy-data');
 
         return redirect()->route('backoffice.products')->with('status', 'Seluruh data dummy berhasil dibersihkan! Katalog produk dan gudang kini bersih dan siap diisi data riil.');
+    }
+
+    /**
+     * Export Seluruh Data Katalog Produk, Bahan Baku & Resep (BOM) ke Format JSON.
+     */
+    public function exportCatalog(Request $request): StreamedResponse
+    {
+        $tenant = $request->user()?->tenant ?? Tenant::first();
+        $outlet = $tenant?->outlets()->first() ?? Outlet::first();
+
+        $categories = Category::where('tenant_id', $tenant->id)->get(['id', 'name', 'icon']);
+        
+        $rawMaterials = RawMaterial::where('tenant_id', $tenant->id)
+            ->with(['outletStocks' => fn ($q) => $q->where('outlet_id', $outlet->id)])
+            ->get();
+
+        $products = Product::where('tenant_id', $tenant->id)
+            ->with(['recipes.rawMaterial', 'category'])
+            ->get();
+
+        $exportData = [
+            'app' => 'SLL POS Pintar',
+            'version' => '1.0',
+            'exported_at' => now()->toIso8601String(),
+            'categories' => $categories->map(fn ($c) => [
+                'name' => $c->name,
+                'icon' => $c->icon,
+            ]),
+            'raw_materials' => $rawMaterials->map(fn ($rm) => [
+                'name' => $rm->name,
+                'sku' => $rm->sku,
+                'unit' => $rm->unit,
+                'average_cost' => (float) $rm->average_cost,
+                'minimum_stock' => (float) $rm->minimum_stock,
+                'current_stock' => (float) ($rm->outletStocks->first()->current_stock ?? 0),
+            ]),
+            'products' => $products->map(fn ($p) => [
+                'category_name' => $p->category?->name,
+                'sku' => $p->sku,
+                'barcode' => $p->barcode,
+                'name' => $p->name,
+                'description' => $p->description,
+                'selling_price' => (float) $p->selling_price,
+                'cogs' => (float) $p->cogs,
+                'track_stock' => (bool) $p->track_stock,
+                'is_active' => (bool) $p->is_active,
+                'recipes' => $p->recipes->map(fn ($r) => [
+                    'raw_material_name' => $r->rawMaterial?->name,
+                    'quantity' => (float) $r->quantity,
+                ]),
+            ]),
+        ];
+
+        $json = json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        $fileName = 'katalog_sll_' . date('Y-m-d_His') . '.json';
+
+        return response()->streamDownload(function () use ($json) {
+            echo $json;
+        }, $fileName, ['Content-Type' => 'application/json']);
+    }
+
+    /**
+     * Import Data Katalog Produk, Bahan Baku & Resep (BOM) dari File JSON.
+     */
+    public function importCatalog(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'catalog_file' => 'required|file',
+        ]);
+
+        $file = $request->file('catalog_file');
+        $content = file_get_contents($file->getRealPath());
+        $data = json_decode($content, true);
+
+        if (! is_array($data) || (empty($data['categories']) && empty($data['products']) && empty($data['raw_materials']))) {
+            return back()->with('error', 'Format file JSON tidak sesuai atau data di dalamnya kosong.');
+        }
+
+        $tenant = $request->user()?->tenant ?? Tenant::first();
+        $outlet = $tenant?->outlets()->first() ?? Outlet::first();
+
+        DB::transaction(function () use ($tenant, $outlet, $data) {
+            // 1. Sync Categories
+            $categoryMap = [];
+            foreach ($data['categories'] ?? [] as $catData) {
+                if (empty($catData['name'])) continue;
+                $category = Category::updateOrCreate(
+                    ['tenant_id' => $tenant->id, 'name' => $catData['name']],
+                    ['icon' => $catData['icon'] ?? 'soup']
+                );
+                $categoryMap[$category->name] = $category->id;
+            }
+
+            // 2. Sync Raw Materials & Stok Gudang
+            $rawMaterialMap = [];
+            foreach ($data['raw_materials'] ?? [] as $rmData) {
+                if (empty($rmData['name'])) continue;
+                $rawMaterial = RawMaterial::updateOrCreate(
+                    ['tenant_id' => $tenant->id, 'name' => $rmData['name']],
+                    [
+                        'sku' => $rmData['sku'] ?? ('RM-' . strtoupper(Str::random(6))),
+                        'unit' => $rmData['unit'] ?? 'gram',
+                        'average_cost' => $rmData['average_cost'] ?? 0,
+                        'minimum_stock' => $rmData['minimum_stock'] ?? 0,
+                    ]
+                );
+                $rawMaterialMap[$rawMaterial->name] = $rawMaterial->id;
+
+                $stockQty = (float) ($rmData['current_stock'] ?? 0);
+                $outletStock = OutletStock::updateOrCreate(
+                    ['outlet_id' => $outlet->id, 'raw_material_id' => $rawMaterial->id],
+                    ['current_stock' => $stockQty]
+                );
+
+                if ($stockQty > 0) {
+                    StockMovement::firstOrCreate(
+                        [
+                            'outlet_stock_id' => $outletStock->id,
+                            'type' => 'RESTOCK_MANUAL',
+                            'notes' => 'Import saldo awal stok bahan baku',
+                        ],
+                        [
+                            'id' => (string) Str::uuid(),
+                            'quantity_delta' => $stockQty,
+                            'balance_after' => $stockQty,
+                        ]
+                    );
+                }
+            }
+
+            // 3. Sync Products & Recipes (BOM)
+            foreach ($data['products'] ?? [] as $prodData) {
+                if (empty($prodData['name'])) continue;
+
+                $categoryId = null;
+                if (! empty($prodData['category_name']) && isset($categoryMap[$prodData['category_name']])) {
+                    $categoryId = $categoryMap[$prodData['category_name']];
+                } elseif (! empty($prodData['category_name'])) {
+                    $newCat = Category::create([
+                        'id' => (string) Str::uuid(),
+                        'tenant_id' => $tenant->id,
+                        'name' => $prodData['category_name'],
+                        'icon' => 'soup',
+                    ]);
+                    $categoryMap[$newCat->name] = $newCat->id;
+                    $categoryId = $newCat->id;
+                }
+
+                $product = Product::updateOrCreate(
+                    ['tenant_id' => $tenant->id, 'name' => $prodData['name']],
+                    [
+                        'category_id' => $categoryId,
+                        'sku' => ! empty($prodData['sku']) ? $prodData['sku'] : ('SKU-' . strtoupper(Str::random(6))),
+                        'barcode' => $prodData['barcode'] ?? null,
+                        'description' => $prodData['description'] ?? null,
+                        'selling_price' => $prodData['selling_price'] ?? 0,
+                        'cogs' => $prodData['cogs'] ?? 0,
+                        'track_stock' => $prodData['track_stock'] ?? true,
+                        'is_active' => $prodData['is_active'] ?? true,
+                    ]
+                );
+
+                // Re-link resep
+                if (! empty($prodData['recipes']) && is_array($prodData['recipes'])) {
+                    $product->recipes()->delete();
+                    foreach ($prodData['recipes'] as $rec) {
+                        $matName = $rec['raw_material_name'] ?? null;
+                        if ($matName && isset($rawMaterialMap[$matName])) {
+                            Recipe::create([
+                                'id' => (string) Str::uuid(),
+                                'product_id' => $product->id,
+                                'raw_material_id' => $rawMaterialMap[$matName],
+                                'quantity' => (float) ($rec['quantity'] ?? 1),
+                            ]);
+                        }
+                    }
+                }
+            }
+        });
+
+        $countProducts = count($data['products'] ?? []);
+        $countMaterials = count($data['raw_materials'] ?? []);
+        $countCategories = count($data['categories'] ?? []);
+
+        return back()->with('status', "Import berhasil! {$countProducts} produk, {$countMaterials} bahan baku, dan {$countCategories} kategori telah sinkron.");
     }
 }

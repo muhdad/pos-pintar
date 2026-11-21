@@ -53,6 +53,10 @@ Route::middleware(['auth', 'verified', 'role:SUPERADMIN,OWNER,MANAGER'])->group(
         // Reset Data Dummy
         Route::post('/reset-dummy-data', [BackofficeController::class, 'resetDummyData'])->name('reset-dummy-data');
 
+        // Export & Import Data Katalog, Bahan Baku, dan Resep
+        Route::get('/catalog/export', [BackofficeController::class, 'exportCatalog'])->name('catalog.export');
+        Route::post('/catalog/import', [BackofficeController::class, 'importCatalog'])->name('catalog.import');
+
         // Manajemen Akun & Pengguna (Superadmin / Owner)
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
