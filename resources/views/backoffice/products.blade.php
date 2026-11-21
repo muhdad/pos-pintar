@@ -110,7 +110,7 @@
                 <button type="button" 
                         @click="categoryModalOpen = true"
                         class="px-3 py-1.5 rounded-[6px] bg-white border border-[#E7E0D8] text-stone-700 hover:bg-stone-50 font-semibold text-xs transition">
-                    + Kategori Baru
+                    Kategori Baru
                 </button>
 
                 <!-- Tambah Produk Button -->
@@ -120,7 +120,7 @@
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
-                    <span>+ Tambah Menu</span>
+                    <span>Tambah Menu</span>
                 </button>
             </div>
         </div>

@@ -23,6 +23,7 @@
         };
         window.POS_INITIAL_CATEGORIES = @json($categories ?? []);
         window.POS_INITIAL_PRODUCTS = @json($products ?? []);
+        window.POS_INITIAL_STOCKS = @json($stocks ?? []);
         window.POS_INITIAL_TABLES = @json($tables ?? []);
         window.POS_INITIAL_OPEN_BILLS = @json($activeOpenBills ?? []);
     </script>

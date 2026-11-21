@@ -63,14 +63,18 @@ class PosTerminalController extends Controller
             ->latest()
             ->get();
 
+        // Ambil data stok bahan baku outlet untuk pengecekan resep
+        $stocks = \App\Models\OutletStock::where('outlet_id', $outlet->id)
+            ->get(['id', 'raw_material_id', 'current_stock']);
+
         // Ambil data produk & kategori tenant aktif
         $categories = Category::where('tenant_id', $tenant->id)->get(['id', 'name', 'icon']);
 
         $products = Product::where('tenant_id', $tenant->id)
             ->where('is_active', true)
             ->with(['recipes.rawMaterial'])
-            ->get(['id', 'category_id', 'sku', 'barcode', 'name', 'selling_price', 'cogs', 'image_url', 'track_stock']);
+            ->get(['id', 'category_id', 'sku', 'barcode', 'name', 'selling_price', 'cogs', 'image_url', 'track_stock', 'is_active']);
 
-        return view('pos.terminal', compact('tenant', 'outlet', 'shift', 'tables', 'activeOpenBills', 'categories', 'products'));
+        return view('pos.terminal', compact('tenant', 'outlet', 'shift', 'tables', 'activeOpenBills', 'categories', 'products', 'stocks'));
     }
 }

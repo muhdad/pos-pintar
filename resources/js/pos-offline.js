@@ -59,6 +59,7 @@ export function posTerminal() {
         searchQuery: '',
         categories: [],
         products: [],
+        stocks: [],
         tables: [],
         openBills: [],
 
@@ -97,6 +98,7 @@ export function posTerminal() {
             this.activeShift = window.POS_CONFIG?.activeShift || null;
             this.tables = window.POS_INITIAL_TABLES || [];
             this.openBills = window.POS_INITIAL_OPEN_BILLS || [];
+            this.stocks = window.POS_INITIAL_STOCKS || [];
 
             // Keyboard shortcuts untuk kasir
             window.addEventListener('keydown', (e) => {
@@ -168,6 +170,7 @@ export function posTerminal() {
         async loadLocalCatalog() {
             this.categories = await posDb.categories.toArray();
             this.products = await posDb.products.toArray();
+            this.stocks = await posDb.stocks.toArray();
         },
 
         // Ambil update master data dari server
@@ -191,6 +194,12 @@ export function posTerminal() {
                         await posDb.products.clear();
                         await posDb.products.bulkPut(data.products);
                         this.products = data.products;
+                    }
+
+                    if (data.stocks?.length > 0) {
+                        await posDb.stocks.clear();
+                        await posDb.stocks.bulkPut(data.stocks);
+                        this.stocks = data.stocks;
                     }
 
                     if (data.tables?.length > 0) {
@@ -259,8 +268,30 @@ export function posTerminal() {
 
         // Cek ketersediaan stok
         isProductOutOfStock(product) {
+            // Jika produk dinonaktifkan dari backoffice
+            if (product.is_active === false) return true;
+
+            // Jika tracking stok dinonaktifkan (unlimited)
             if (!product.track_stock) return false;
-            return (Number(product.current_stock) || 0) <= 0;
+
+            // Jika ada field current_stock eksplisit (misal barang retail botol/kaleng)
+            if (product.current_stock !== undefined && product.current_stock !== null) {
+                return Number(product.current_stock) <= 0;
+            }
+
+            // Jika produk memiliki resep bahan baku (BOM) & gudang memiliki data stok
+            if (product.recipes && product.recipes.length > 0 && this.stocks && this.stocks.length > 0) {
+                for (const recipe of product.recipes) {
+                    const st = this.stocks.find(s => s.raw_material_id === recipe.raw_material_id);
+                    // Jika bahan baku terdaftar di resep dan stoknya habis / kurang dari takaran
+                    if (st && Number(st.current_stock) < Number(recipe.quantity)) {
+                        return true;
+                    }
+                }
+            }
+
+            // Default: menu siap dijual di kasir
+            return false;
         },
 
         // Tambah item ke keranjang (0ms latency, client-side)
