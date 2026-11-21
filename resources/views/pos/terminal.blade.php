@@ -176,17 +176,17 @@
                 <div class="flex-1 overflow-y-auto min-h-0 content-start auto-rows-max grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-2.5 p-0.5 pb-24 lg:pb-8">
                     <template x-for="product in filteredProducts" :key="product.id">
                         <div @click="addToCart(product)"
-                             class="rounded-[8px] p-2.5 sm:p-3 flex flex-col justify-between transition group min-h-[96px] sm:min-h-[104px] relative select-none"
+                             class="rounded-[8px] p-2.5 sm:p-3 flex flex-col justify-between transition group min-h-[96px] sm:min-h-[104px] relative select-none cursor-pointer"
                              :class="isProductOutOfStock(product) 
-                                ? 'bg-stone-100 border border-stone-200 opacity-60 cursor-not-allowed' 
-                                : 'bg-white border border-[#E7E0D8] hover:border-[#EA580C] hover:bg-[#FFFDF9] cursor-pointer active:scale-[0.98] hover:shadow-subtle'">
+                                ? 'bg-amber-50/50 border border-amber-300 hover:border-amber-500' 
+                                : 'bg-white border border-[#E7E0D8] hover:border-[#EA580C] hover:bg-[#FFFDF9] active:scale-[0.98] hover:shadow-subtle'">
                             
                             <div>
                                 <!-- SKU / Category & Stock Status -->
                                 <div class="flex items-center justify-between mb-1">
                                     <span class="text-[9px] font-mono font-bold uppercase tracking-wider text-stone-400 truncate" x-text="product.sku || 'Menu SLL'"></span>
                                     <template x-if="isProductOutOfStock(product)">
-                                        <span class="text-[9px] font-bold px-1.5 py-0.2 rounded-[4px] bg-red-100 text-red-700 uppercase">Habis</span>
+                                        <span class="text-[9px] font-bold px-1.5 py-0.2 rounded-[4px] bg-red-100 text-red-700 uppercase" :title="getOutOfStockReason(product)">Habis</span>
                                     </template>
                                     <template x-if="!isProductOutOfStock(product)">
                                         <span class="w-1.5 h-1.5 rounded-full bg-[#EA580C]/40 group-hover:bg-[#EA580C] transition shrink-0"></span>
@@ -208,9 +208,10 @@
                                     </template>
                                 </div>
                                 <button type="button" 
-                                        :disabled="isProductOutOfStock(product)"
-                                        class="w-6 h-6 sm:w-7 sm:h-7 rounded-[4px] text-stone-700 group-hover:text-white flex items-center justify-center text-xs sm:text-sm font-bold transition active:translate-y-px shrink-0"
-                                        :class="isProductOutOfStock(product) ? 'bg-stone-200 text-stone-400 cursor-not-allowed' : 'bg-stone-100 group-hover:bg-[#EA580C]'"
+                                        class="w-6 h-6 sm:w-7 sm:h-7 rounded-[4px] flex items-center justify-center text-xs sm:text-sm font-bold transition active:translate-y-px shrink-0"
+                                        :class="isProductOutOfStock(product) 
+                                            ? 'bg-amber-100 text-amber-900 group-hover:bg-[#EA580C] group-hover:text-white' 
+                                            : 'bg-stone-100 text-stone-700 group-hover:bg-[#EA580C] group-hover:text-white'"
                                         title="Tambah item">
                                     +
                                 </button>

@@ -294,11 +294,29 @@ export function posTerminal() {
             return false;
         },
 
+        // Alasan stok habis untuk info kasir
+        getOutOfStockReason(product) {
+            if (product.is_active === false) return 'Menu sedang dinonaktifkan di Backoffice';
+            if (product.recipes && product.recipes.length > 0 && this.stocks && this.stocks.length > 0) {
+                for (const recipe of product.recipes) {
+                    const st = this.stocks.find(s => s.raw_material_id === recipe.raw_material_id);
+                    if (st && Number(st.current_stock) < Number(recipe.quantity)) {
+                        const matName = recipe.raw_material?.name || st.name || 'Bahan Baku';
+                        return `Stok [${matName}] di gudang habis (sisa: ${Number(st.current_stock)})`;
+                    }
+                }
+            }
+            return 'Stok gudang belum di-restock';
+        },
+
         // Tambah item ke keranjang (0ms latency, client-side)
         addToCart(product) {
             if (this.isProductOutOfStock(product)) {
-                alert(`Menu "${product.name}" sedang habis (Out of Stock)!`);
-                return;
+                const reason = this.getOutOfStockReason(product);
+                const bypass = confirm(`Menu "${product.name}" terdeteksi HABIS:\n• ${reason}\n\nApakah kasir ingin tetap menambahkan menu ini ke pesanan?`);
+                if (!bypass) {
+                    return;
+                }
             }
 
             const currentPrice = this.getProductPrice(product);
