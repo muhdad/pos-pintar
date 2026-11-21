@@ -26,6 +26,7 @@
         materialModalOpen: false,
         restockModalOpen: false,
         opnameModalOpen: false,
+        importModalOpen: false,
         editMaterialModalOpen: false,
         editingMaterial: {
             id: '',
@@ -56,6 +57,27 @@
                 <p class="text-xs text-stone-500 mt-0.5">Monitoring kuantitas bahan baku riil, restock nota faktur, dan audit mutasi stok resep.</p>
             </div>
             <div class="flex items-center gap-2">
+                <!-- Export JSON Button -->
+                <a href="{{ route('backoffice.catalog.export') }}" 
+                   class="px-2.5 py-1.5 rounded-[6px] bg-white border border-[#E7E0D8] text-stone-700 hover:bg-stone-50 font-semibold text-xs transition flex items-center gap-1.5"
+                   title="Download file backup bahan baku & stok gudang (JSON)">
+                    <svg class="w-3.5 h-3.5 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    <span>Export</span>
+                </a>
+
+                <!-- Import JSON Button -->
+                <button type="button" 
+                        @click="importModalOpen = true"
+                        class="px-2.5 py-1.5 rounded-[6px] bg-white border border-[#E7E0D8] text-stone-700 hover:bg-stone-50 font-semibold text-xs transition flex items-center gap-1.5"
+                        title="Upload file data bahan baku & stok gudang (JSON)">
+                    <svg class="w-3.5 h-3.5 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    <span>Import</span>
+                </button>
+
                 <button type="button" 
                         @click="opnameModalOpen = true"
                         class="px-3 py-1.5 rounded-[6px] bg-white border border-amber-300 text-amber-900 hover:bg-amber-50 font-semibold text-xs transition flex items-center gap-1.5">
@@ -407,6 +429,49 @@
                         </div>
                     </form>
                 @endif
+            </div>
+        </div>
+
+        <!-- Import Bahan & Stok JSON Modal -->
+        <div x-show="importModalOpen" 
+             class="fixed inset-0 bg-stone-900/50 z-50 flex items-center justify-center p-4" 
+             x-cloak>
+            <div class="bg-white rounded-[10px] max-w-sm w-full p-5 border border-[#E7E0D8] shadow-modal animate-in fade-in duration-150"
+                 @click.outside="importModalOpen = false">
+                <div class="flex items-center justify-between pb-2.5 border-b border-stone-100">
+                    <div>
+                        <h3 class="text-xs font-display font-bold text-stone-900 uppercase tracking-wide">Import Bahan Baku & Stok</h3>
+                        <p class="text-[10px] text-stone-500">Upload file JSON hasil export dari komputer lokal.</p>
+                    </div>
+                    <button type="button" @click="importModalOpen = false" class="text-stone-400 hover:text-stone-700 font-bold p-1">✕</button>
+                </div>
+
+                <form method="POST" action="{{ route('backoffice.catalog.import') }}" enctype="multipart/form-data" class="mt-3 space-y-3">
+                    @csrf
+                    <div>
+                        <label class="block text-xs font-semibold text-stone-700 mb-1">Pilih File JSON <span class="text-red-500">*</span></label>
+                        <input type="file" 
+                               name="catalog_file" 
+                               accept=".json" 
+                               required 
+                               class="w-full text-xs text-stone-700 file:mr-2 file:py-1.5 file:px-3 file:rounded-[6px] file:border-0 file:text-xs file:font-semibold file:bg-[#5B0A14] file:text-white hover:file:bg-[#7A0F1C] cursor-pointer">
+                        <span class="text-[10px] text-stone-400 mt-1 block">File yang didukung: <code>.json</code> hasil export dari Backoffice.</span>
+                    </div>
+
+                    <div class="p-2.5 rounded-[6px] bg-amber-50 border border-amber-200 text-amber-900 text-[11px] space-y-1">
+                        <span class="font-bold block">Yang Otomatis Disinkronkan:</span>
+                        <ul class="list-disc list-inside space-y-0.5 text-stone-600">
+                            <li>Daftar Bahan Baku & HPP Satuan</li>
+                            <li><strong>Saldo Sisa Stok Riil Gudang</strong></li>
+                            <li>Katalog Menu & Takaran Resep (BOM)</li>
+                        </ul>
+                    </div>
+
+                    <div class="pt-2 flex justify-end gap-2">
+                        <button type="button" @click="importModalOpen = false" class="px-3 py-1.5 rounded-[6px] bg-stone-100 text-stone-600 text-xs font-medium hover:bg-stone-200 transition">Batal</button>
+                        <button type="submit" class="px-3.5 py-1.5 rounded-[6px] bg-[#EA580C] hover:bg-[#D94E07] text-white text-xs font-bold transition">Mulai Import</button>
+                    </div>
+                </form>
             </div>
         </div>
 
