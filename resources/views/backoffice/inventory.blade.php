@@ -28,14 +28,14 @@
         opnameModalOpen: false,
         importModalOpen: false,
         editMaterialModalOpen: false,
-        editingMaterial: {
-            id: '',
-            name: '',
-            unit: 'gram',
-            average_cost: 0,
-            minimum_stock: 0,
-            current_stock: 0
-        },
+        ocrModalOpen: false,
+        ocrScanning: false,
+        ocrReceiptImage: null,
+        ocrResult: null,
+        previewImage: null,
+        scanError: null,
+        recordCashflow: true,
+        rawMaterialsList: {{ Js::from($rawMaterials) }},
 
         openEditModal(mat, currentStock) {
             this.editingMaterial = {
@@ -47,6 +47,72 @@
                 current_stock: Number(currentStock)
             };
             this.editMaterialModalOpen = true;
+        },
+
+        onReceiptSelected(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.ocrReceiptImage = file;
+                this.previewImage = URL.createObjectURL(file);
+                this.scanError = null;
+                this.ocrResult = null;
+            }
+        },
+
+        async submitReceiptScan() {
+            if (!this.ocrReceiptImage) return;
+            this.ocrScanning = true;
+            this.scanError = null;
+            const formData = new FormData();
+            formData.append('receipt_image', this.ocrReceiptImage);
+            formData.append('_token', '{{ csrf_token() }}');
+
+            try {
+                const res = await fetch('{{ route('backoffice.inventory.ocr-scan') }}', {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: formData
+                });
+                const json = await res.json();
+                if (json.success) {
+                    this.ocrResult = json.data;
+                } else {
+                    this.scanError = json.message || 'Gagal memindai struk belanja.';
+                }
+            } catch (err) {
+                this.scanError = 'Koneksi gagal saat menghubungi server OCR.';
+            } finally {
+                this.ocrScanning = false;
+            }
+        },
+
+        removeOcrItem(index) {
+            if (this.ocrResult && this.ocrResult.items) {
+                this.ocrResult.items.splice(index, 1);
+            }
+        },
+
+        recalcItemHpp(item) {
+            const mat = this.rawMaterialsList.find(m => m.id === item.raw_material_id);
+            if (mat) {
+                const currentStock = mat.outlet_stocks && mat.outlet_stocks[0] ? Number(mat.outlet_stocks[0].current_stock) : 0;
+                const currentHpp = Number(mat.average_cost);
+                const addQty = Number(item.quantity) || 0;
+                const addPrice = Number(item.total_price) || 0;
+                if ((currentStock + addQty) > 0) {
+                    item.new_hpp = Math.round(((currentStock * currentHpp) + addPrice) / (currentStock + addQty));
+                } else {
+                    item.new_hpp = addQty > 0 ? Math.round(addPrice / addQty) : currentHpp;
+                }
+            }
+        },
+        editingMaterial: {
+            id: '',
+            name: '',
+            unit: 'gram',
+            average_cost: 0,
+            minimum_stock: 0,
+            current_stock: 0
         }
     }" class="space-y-5">
 
@@ -78,9 +144,19 @@
                     <span>Import</span>
                 </button>
 
+                <!-- Auto Restock Struk AI Button (Bauhaus Accent) -->
+                <button type="button" 
+                        @click="ocrModalOpen = true"
+                        class="bauhaus-btn-yellow">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    </svg>
+                    <span>📸 Auto Restock Struk AI</span>
+                </button>
+
                 <button type="button" 
                         @click="opnameModalOpen = true"
-                        class="px-3 py-1.5 rounded-[6px] bg-white border border-amber-300 text-amber-900 hover:bg-amber-50 font-semibold text-xs transition flex items-center gap-1.5">
+                        class="px-3 py-1.5 rounded-[4px] bg-white border-2 border-[#121212] text-amber-900 hover:bg-amber-50 font-bold text-xs transition flex items-center gap-1.5 shadow-[2px_2px_0px_#121212]">
                     <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                     </svg>
@@ -89,20 +165,20 @@
 
                 <button type="button" 
                         @click="restockModalOpen = true"
-                        class="px-3 py-1.5 rounded-[6px] bg-white border border-[#E7E0D8] text-stone-700 hover:bg-stone-50 font-semibold text-xs transition flex items-center gap-1.5">
+                        class="px-3 py-1.5 rounded-[4px] bg-white border-2 border-[#121212] text-stone-700 hover:bg-stone-50 font-bold text-xs transition flex items-center gap-1.5 shadow-[2px_2px_0px_#121212]">
                     <svg class="w-3.5 h-3.5 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
-                    <span>Restock Gudang</span>
+                    <span>Restock Manual</span>
                 </button>
 
                 <button type="button" 
                         @click="materialModalOpen = true"
-                        class="px-3.5 py-1.5 rounded-[6px] bg-[#EA580C] hover:bg-[#D94E07] text-white font-bold text-xs tracking-wide transition shadow-subtle flex items-center gap-1.5 active:translate-y-px">
+                        class="bauhaus-btn-blue">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
-                    <span>+ Daftarkan Bahan Baku</span>
+                    <span>+ Bahan Baru</span>
                 </button>
             </div>
         </div>
@@ -114,13 +190,14 @@
                     $currentStock = (float) ($material->outletStocks->first()->current_stock ?? 0);
                     $isLow = $currentStock <= (float) $material->minimum_stock;
                 @endphp
-                <div class="bg-white rounded-[10px] p-4 border {{ $isLow ? 'border-amber-300 ring-1 ring-amber-200' : 'border-[#E7E0D8]' }} flex flex-col justify-between">
-                    <div>
+                <div class="bauhaus-card p-4 flex flex-col justify-between relative overflow-hidden bg-white">
+                    <div class="absolute top-0 left-0 w-1.5 h-full {{ $isLow ? 'bg-[#DC2626]' : 'bg-[#1D4ED8]' }}"></div>
+                    <div class="pl-1">
                         <div class="flex items-center justify-between mb-2">
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-stone-400 font-mono">{{ $material->unit }}</span>
+                            <span class="text-[10px] font-black uppercase tracking-wider text-stone-500 font-mono">{{ $material->unit }}</span>
                             <div class="flex items-center gap-1">
-                                <span class="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold {{ $isLow ? 'bg-amber-100 text-amber-800' : 'bg-emerald-50 text-emerald-800' }}">
-                                    {{ $isLow ? 'Menipis' : 'Aman' }}
+                                <span class="bauhaus-badge {{ $isLow ? 'bg-red-100 text-red-900 border-red-700' : 'bg-blue-50 text-blue-900 border-blue-700' }}">
+                                    {{ $isLow ? 'MENIPIS' : 'AMAN' }}
                                 </span>
 
                                 <!-- Edit Material Button -->
@@ -472,6 +549,216 @@
                         <button type="submit" class="px-3.5 py-1.5 rounded-[6px] bg-[#EA580C] hover:bg-[#D94E07] text-white text-xs font-bold transition">Mulai Import</button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- Auto Restock via Struk AI Modal (Bauhaus Style) -->
+        <div x-show="ocrModalOpen" 
+             class="fixed inset-0 bg-stone-900/60 z-50 flex items-center justify-center p-4" 
+             x-cloak>
+            <div class="bauhaus-card max-w-2xl w-full p-5 bg-white shadow-modal animate-in fade-in max-h-[90vh] overflow-y-auto"
+                 @click.outside="ocrModalOpen = false">
+                <div class="flex items-center justify-between pb-3 border-b-2 border-stone-900 mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 bg-[#FACC15] border border-black"></span>
+                        <div>
+                            <h3 class="text-sm font-display font-black text-[#121212] uppercase tracking-wide">
+                                📸 Auto Restock via Foto Struk (AI OCR)
+                            </h3>
+                            <p class="text-[10px] text-stone-500 font-mono">Pindai nota pasar/supplier, sesuaikan stok riil, dan hitung HPP Moving Average secara otomatis.</p>
+                        </div>
+                    </div>
+                    <button type="button" @click="ocrModalOpen = false" class="text-stone-900 hover:text-red-600 font-black p-1">✕</button>
+                </div>
+
+                <!-- Step 1: Upload / Capture Struk -->
+                <div class="space-y-4">
+                    <div class="p-3 bg-[#F6F4ED] border-2 border-dashed border-stone-900 text-center">
+                        <input type="file" 
+                               id="receipt_file_input"
+                               accept="image/*" 
+                               capture="environment" 
+                               @change="onReceiptSelected($event)" 
+                               class="hidden">
+                        
+                        <div x-show="!previewImage" class="py-4 cursor-pointer" @click="document.getElementById('receipt_file_input').click()">
+                            <svg class="w-8 h-8 mx-auto text-stone-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            </svg>
+                            <span class="font-bold text-xs text-stone-800 block">Klik untuk Ambil Foto Kamera / Pilih File Struk</span>
+                            <span class="text-[10px] text-stone-400 font-mono mt-1 block">Format: JPG, PNG, WEBP (Maksimal 10MB)</span>
+                        </div>
+
+                        <div x-show="previewImage" class="flex flex-col sm:flex-row items-center gap-4 py-2">
+                            <img :src="previewImage" alt="Preview Struk" class="h-28 w-auto border-2 border-stone-900 object-contain bg-white">
+                            <div class="text-left flex-1">
+                                <span class="font-bold text-xs text-stone-900 block" x-text="ocrReceiptImage ? ocrReceiptImage.name : ''"></span>
+                                <span class="text-[10px] text-stone-500 font-mono block mt-0.5">Siap dianalisis oleh AI OCR.</span>
+                                <div class="mt-2.5 flex items-center gap-2">
+                                    <button type="button" 
+                                            @click="document.getElementById('receipt_file_input').click()" 
+                                            class="bauhaus-btn-white text-[11px] py-1 px-2.5">
+                                        Ganti Foto
+                                    </button>
+                                    <button type="button" 
+                                            @click="submitReceiptScan()" 
+                                            :disabled="ocrScanning" 
+                                            class="bauhaus-btn-blue text-[11px] py-1 px-3">
+                                        <span x-show="!ocrScanning">🤖 Mulai Pindai AI</span>
+                                        <span x-show="ocrScanning">Memproses OCR...</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Error Alert -->
+                    <div x-show="scanError" class="p-2.5 bg-red-100 border-2 border-red-700 text-red-900 text-xs font-bold font-mono">
+                        <span x-text="scanError"></span>
+                    </div>
+
+                    <!-- Spinner During Scan -->
+                    <div x-show="ocrScanning" class="p-6 bg-white border-2 border-stone-900 text-center space-y-2">
+                        <div class="inline-block animate-spin rounded-none h-6 w-6 border-4 border-stone-900 border-t-[#FACC15]"></div>
+                        <p class="text-xs font-bold text-stone-800">Sedang mengekstrak teks nota belanja & mencocokkan bahan baku...</p>
+                        <span class="text-[10px] text-stone-500 font-mono">Mengkalkulasi Moving Average Cost (HPP baru) secara otomatis.</span>
+                    </div>
+
+                    <!-- Step 2: Extracted Items Table (Form Confirm) -->
+                    <div x-show="ocrResult" class="space-y-4 pt-2">
+                        <form method="POST" action="{{ route('backoffice.inventory.ocr-confirm') }}" class="space-y-4">
+                            @csrf
+                            <input type="hidden" name="receipt_image_path" :value="ocrResult ? ocrResult.receipt_image_path : ''">
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-stone-50 border-2 border-stone-900">
+                                <div>
+                                    <label class="block text-[10px] font-black uppercase text-stone-600 font-mono mb-1">Nama Toko / Supplier</label>
+                                    <input type="text" 
+                                           name="merchant_name" 
+                                           x-model="ocrResult ? ocrResult.merchant_name : ''" 
+                                           required 
+                                           class="bauhaus-input w-full text-xs">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black uppercase text-stone-600 font-mono mb-1">Tanggal Struk</label>
+                                    <input type="date" 
+                                           name="receipt_date" 
+                                           x-model="ocrResult ? ocrResult.receipt_date : ''" 
+                                           class="bauhaus-input w-full text-xs font-mono">
+                                </div>
+                            </div>
+
+                            <!-- Extracted Items -->
+                            <div>
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <span class="text-xs font-black uppercase tracking-wider text-[#121212] font-mono">ITEM BAHAN TERDETEKSI</span>
+                                    <span class="text-[10px] text-stone-500 font-mono">Pastikan bahan & harga sesuai nota</span>
+                                </div>
+
+                                <div class="border-2 border-stone-900 overflow-x-auto">
+                                    <table class="w-full text-left text-xs min-w-[550px]">
+                                        <thead>
+                                            <tr class="bg-[#121212] text-white font-mono font-black text-[9px] uppercase tracking-wider">
+                                                <th class="py-2 px-2.5">Item Nota</th>
+                                                <th class="py-2 px-2.5">Cocokkan Bahan Baku</th>
+                                                <th class="py-2 px-2">Qty Restock</th>
+                                                <th class="py-2 px-2.5">Total Bayar (Rp)</th>
+                                                <th class="py-2 px-2">HPP Baru</th>
+                                                <th class="py-2 px-1 text-center">✕</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y-2 divide-stone-200 bg-white">
+                                            <template x-for="(item, index) in (ocrResult ? ocrResult.items : [])" :key="index">
+                                                <tr class="hover:bg-amber-50/50">
+                                                    <!-- Raw Name in Struk -->
+                                                    <td class="py-2 px-2.5 font-bold text-stone-800 text-[11px]" x-text="item.raw_name"></td>
+
+                                                    <!-- Material Select Dropdown -->
+                                                    <td class="py-2 px-2.5">
+                                                        <select :name="'items[' + index + '][raw_material_id]'" 
+                                                                x-model="item.matched_material_id" 
+                                                                @change="recalcItemHpp(item)"
+                                                                required 
+                                                                class="bauhaus-input text-[11px] py-1 px-1.5 w-full">
+                                                            <option value="">-- Pilih Bahan Baku --</option>
+                                                            <template x-for="mat in rawMaterialsList" :key="mat.id">
+                                                                <option :value="mat.id" 
+                                                                        :selected="mat.id === item.matched_material_id" 
+                                                                        x-text="mat.name + ' (' + mat.unit + ')'"></option>
+                                                            </template>
+                                                        </select>
+                                                    </td>
+
+                                                    <!-- Quantity -->
+                                                    <td class="py-2 px-2 whitespace-nowrap">
+                                                        <div class="flex items-center gap-1">
+                                                            <input type="number" 
+                                                                   :name="'items[' + index + '][quantity]'" 
+                                                                   x-model="item.quantity" 
+                                                                   @input="recalcItemHpp(item)"
+                                                                   min="0.01" 
+                                                                   step="any" 
+                                                                   required 
+                                                                   class="bauhaus-input text-xs font-mono py-1 px-1.5 w-20">
+                                                            <span class="text-[10px] font-mono text-stone-500" x-text="item.unit"></span>
+                                                        </div>
+                                                    </td>
+
+                                                    <!-- Total Line Price -->
+                                                    <td class="py-2 px-2.5">
+                                                        <input type="number" 
+                                                               :name="'items[' + index + '][total_price]'" 
+                                                               x-model="item.total_price" 
+                                                               @input="recalcItemHpp(item)"
+                                                               min="0" 
+                                                               step="1" 
+                                                               required 
+                                                               class="bauhaus-input text-xs font-mono py-1 px-1.5 w-24">
+                                                    </td>
+
+                                                    <!-- New HPP (Weighted Moving Average) -->
+                                                    <td class="py-2 px-2 font-mono whitespace-nowrap">
+                                                        <span class="bauhaus-badge bg-emerald-50 text-emerald-900 border-emerald-700 block text-[9px]" 
+                                                              x-text="'Rp ' + Number(item.new_hpp || 0).toLocaleString('id-ID') + '/' + item.unit"></span>
+                                                    </td>
+
+                                                    <!-- Remove Line -->
+                                                    <td class="py-2 px-1 text-center">
+                                                        <button type="button" @click="removeOcrItem(index)" class="text-red-500 hover:text-red-800 font-bold p-1">✕</button>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Checkbox: Potong dari Omzet H-1 & Catat ke Arus Kas -->
+                            <div class="p-3 bg-amber-50 border-2 border-stone-900 flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" 
+                                           name="record_cashflow" 
+                                           id="record_cashflow_check" 
+                                           value="1" 
+                                           checked 
+                                           class="border-2 border-black text-[#1D4ED8] focus:ring-0">
+                                    <label for="record_cashflow_check" class="font-bold text-xs text-stone-900 cursor-pointer">
+                                        Catat ke Arus Kas & Potong dari Omzet H-1
+                                    </label>
+                                </div>
+                                <span class="bauhaus-badge bg-[#FACC15] text-[#121212]">PERPUTARAN H-1</span>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="pt-3 flex justify-end gap-2 border-t-2 border-stone-200">
+                                <button type="button" @click="ocrModalOpen = false" class="bauhaus-btn-white">Batal</button>
+                                <button type="submit" class="bauhaus-btn-yellow font-black">
+                                    ✓ Konfirmasi & Restock Sekarang
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
 

@@ -84,7 +84,7 @@
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
-                    <span>+ Tambah Pengguna</span>
+                    <span>Tambah Pengguna</span>
                 </button>
             </div>
         </div>
@@ -110,6 +110,7 @@
                     <option value="SUPERADMIN" {{ request('role') === 'SUPERADMIN' ? 'selected' : '' }}>Superadmin</option>
                     <option value="OWNER" {{ request('role') === 'OWNER' ? 'selected' : '' }}>Owner</option>
                     <option value="MANAGER" {{ request('role') === 'MANAGER' ? 'selected' : '' }}>Manager</option>
+                    <option value="FINANCE" {{ request('role') === 'FINANCE' ? 'selected' : '' }}>Finance / Keuangan</option>
                     <option value="CASHIER" {{ request('role') === 'CASHIER' ? 'selected' : '' }}>Kasir (Cashier)</option>
                 </select>
 
@@ -169,8 +170,8 @@
 
                                 <!-- Role Badge -->
                                 <td class="py-3 px-3">
-                                    <span class="inline-block px-2 py-0.5 rounded-[4px] text-[10px] font-bold border {{ $user->role === 'SUPERADMIN' ? 'bg-stone-900 text-white border-stone-900' : ($user->role === 'OWNER' ? 'bg-[#5B0A14] text-white border-[#5B0A14]' : ($user->role === 'MANAGER' ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-stone-100 text-stone-700 border-stone-200')) }}">
-                                        {{ $user->role }}
+                                    <span class="inline-block px-2 py-0.5 rounded-[4px] text-[10px] font-bold border {{ $user->role === 'SUPERADMIN' ? 'bg-stone-900 text-white border-stone-900' : ($user->role === 'OWNER' ? 'bg-[#5B0A14] text-white border-[#5B0A14]' : ($user->role === 'FINANCE' ? 'bg-[#1D4ED8] text-white border-[#1D4ED8]' : ($user->role === 'MANAGER' ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-stone-100 text-stone-700 border-stone-200'))) }}">
+                                        {{ $user->role === 'FINANCE' ? 'FINANCE' : $user->role }}
                                     </span>
                                 </td>
 
@@ -318,6 +319,7 @@
                                     required 
                                     class="w-full bg-white border border-[#E7E0D8] rounded-[6px] px-2.5 py-1.5 text-xs text-stone-900 focus:outline-none focus:ring-1 focus:ring-[#EA580C]">
                                 <option value="CASHIER">Kasir (Terminal POS)</option>
+                                <option value="FINANCE">Finance (Akses Arus Kas & Struk)</option>
                                 <option value="MANAGER">Manager (Operasional & Stok)</option>
                                 <option value="OWNER">Owner (Backoffice Penuh)</option>
                                 <option value="SUPERADMIN">Superadmin</option>

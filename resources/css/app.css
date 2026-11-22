@@ -61,7 +61,180 @@
 
 /* Fast, functional interaction */
 button, a {
-    transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease, color 120ms ease;
+    transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease, color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+}
+
+/* Bauhaus Architectural Design System */
+.bauhaus-card {
+    background-color: #FFFFFF;
+    border: 2px solid #121212;
+    box-shadow: 3px 3px 0px #121212;
+    border-radius: 4px;
+}
+
+.bauhaus-card-elevated {
+    background-color: #FFFFFF;
+    border: 2px solid #121212;
+    box-shadow: 5px 5px 0px #121212;
+    border-radius: 4px;
+}
+
+.bauhaus-btn-blue {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    background-color: #1D4ED8;
+    color: #FFFFFF;
+    border: 2px solid #121212;
+    box-shadow: 2px 2px 0px #121212;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.375rem 0.875rem;
+    border-radius: 4px;
+    transition: all 100ms ease;
+}
+.bauhaus-btn-blue:hover {
+    background-color: #1E40AF;
+}
+.bauhaus-btn-blue:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0px 0px 0px #121212;
+}
+
+.bauhaus-btn-red {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    background-color: #DC2626;
+    color: #FFFFFF;
+    border: 2px solid #121212;
+    box-shadow: 2px 2px 0px #121212;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.375rem 0.875rem;
+    border-radius: 4px;
+    transition: all 100ms ease;
+}
+.bauhaus-btn-red:hover {
+    background-color: #B91C1C;
+}
+.bauhaus-btn-red:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0px 0px 0px #121212;
+}
+
+.bauhaus-btn-yellow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    background-color: #FACC15;
+    color: #121212;
+    border: 2px solid #121212;
+    box-shadow: 2px 2px 0px #121212;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.375rem 0.875rem;
+    border-radius: 4px;
+    transition: all 100ms ease;
+}
+.bauhaus-btn-yellow:hover {
+    background-color: #EAB308;
+}
+.bauhaus-btn-yellow:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0px 0px 0px #121212;
+}
+
+.bauhaus-btn-dark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    background-color: #121212;
+    color: #FFFFFF;
+    border: 2px solid #121212;
+    box-shadow: 2px 2px 0px #121212;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.375rem 0.875rem;
+    border-radius: 4px;
+    transition: all 100ms ease;
+}
+.bauhaus-btn-dark:hover {
+    background-color: #27272A;
+}
+.bauhaus-btn-dark:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0px 0px 0px #121212;
+}
+
+.bauhaus-btn-white {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    background-color: #FFFFFF;
+    color: #121212;
+    border: 2px solid #121212;
+    box-shadow: 2px 2px 0px #121212;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 0.75rem;
+    letter-spacing: 0.03em;
+    padding: 0.375rem 0.875rem;
+    border-radius: 4px;
+    transition: all 100ms ease;
+}
+.bauhaus-btn-white:hover {
+    background-color: #F4F4F5;
+}
+.bauhaus-btn-white:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0px 0px 0px #121212;
+}
+
+.bauhaus-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border: 1.5px solid #121212;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.65rem;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-radius: 3px;
+}
+
+.bauhaus-input {
+    background-color: #FFFFFF;
+    border: 2px solid #121212;
+    border-radius: 4px;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    color: #121212;
+    transition: all 120ms ease;
+}
+.bauhaus-input:focus {
+    outline: none;
+    box-shadow: 2px 2px 0px #1D4ED8;
+    border-color: #1D4ED8;
 }
 
 /* Thermal receipt printable mode (58mm & 80mm standard) */

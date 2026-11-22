@@ -13,6 +13,15 @@ export default {
     theme: {
         extend: {
             colors: {
+                bauhaus: {
+                    dark:   '#121212',
+                    paper:  '#F6F4ED',
+                    blue:   '#1D4ED8',
+                    red:    '#DC2626',
+                    yellow: '#FACC15',
+                    muted:  '#52525B',
+                    border: '#121212',
+                },
                 brand: {
                     // Deep maroon for sidebar, top bar, dark surfaces, and high-emphasis headers
                     maroon: {
@@ -76,6 +85,9 @@ export default {
             },
             // Subtle, functional elevation only for modals and popups. Surfaces use 1px borders.
             boxShadow: {
+                'bauhaus': '3px 3px 0px #121212',
+                'bauhaus-lg': '5px 5px 0px #121212',
+                'bauhaus-sm': '2px 2px 0px #121212',
                 subtle: '0 1px 2px 0 rgba(41, 37, 36, 0.04)',
                 dropdown: '0 4px 12px -2px rgba(41, 37, 36, 0.08)',
                 modal: '0 12px 32px -4px rgba(41, 37, 36, 0.16)',

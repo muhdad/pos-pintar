@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Backoffice;
 
 use App\Http\Controllers\Controller;
 use App\Models\AiDailyReport;
+use App\Models\Cashflow;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\Outlet;
@@ -15,8 +16,10 @@ use App\Models\StockMovement;
 use App\Models\Tenant;
 use App\Services\Ai\AiConsultantService;
 use App\Services\Ai\BusinessDataAggregator;
+use App\Services\Ai\ReceiptOcrService;
 use App\Services\Pos\InventoryDeductionService;
 use App\Services\Pos\OrderService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -856,5 +859,121 @@ class BackofficeController extends Controller
         $countCategories = count($data['categories'] ?? []);
 
         return back()->with('status', "Import berhasil! {$countProducts} produk, {$countMaterials} bahan baku, dan {$countCategories} kategori telah sinkron.");
+    }
+
+    /**
+     * Scan foto struk belanja bahan baku via AI OCR (Gemini Vision / Fallback).
+     */
+    public function scanReceiptOcr(Request $request, ReceiptOcrService $ocrService): JsonResponse
+    {
+        $request->validate([
+            'receipt_image' => 'required|file|mimes:jpg,jpeg,png,webp|max:10240',
+        ]);
+
+        $tenant = $request->user()?->tenant ?? Tenant::first();
+        $outlet = $tenant?->outlets()->first() ?? Outlet::first();
+
+        try {
+            $result = $ocrService->scanReceipt(
+                $request->file('receipt_image'),
+                $outlet?->id,
+                $tenant?->id
+            );
+
+            return response()->json([
+                'success' => true,
+                'data' => $result,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memindai struk: ' . $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Konfirmasi restock bahan baku dari hasil scan struk belanja:
+     * Menyesuaikan stok gudang, menghitung HPP baru (Moving Average),
+     * dan otomatis mencatat ke pengeluaran Arus Kas (dipotong dari Omzet H-1).
+     */
+    public function confirmOcrRestock(Request $request): RedirectResponse
+    {
+        $tenant = $request->user()?->tenant ?? Tenant::first();
+        $outlet = $tenant?->outlets()->first() ?? Outlet::first();
+
+        $validated = $request->validate([
+            'merchant_name' => 'nullable|string|max:150',
+            'receipt_image_path' => 'nullable|string',
+            'record_cashflow' => 'nullable',
+            'items' => 'required|array|min:1',
+            'items.*.raw_material_id' => 'required|exists:raw_materials,id',
+            'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.total_price' => 'required|numeric|min:0',
+        ]);
+
+        $totalPurchase = 0;
+        $restockedNames = [];
+
+        DB::transaction(function () use ($outlet, $tenant, $validated, $request, &$totalPurchase, &$restockedNames) {
+            foreach ($validated['items'] as $item) {
+                $material = RawMaterial::find($item['raw_material_id']);
+                if (! $material) {
+                    continue;
+                }
+
+                $stock = OutletStock::firstOrCreate(
+                    ['outlet_id' => $outlet->id, 'raw_material_id' => $material->id],
+                    ['current_stock' => 0]
+                );
+
+                $oldStock = max(0, (float) $stock->current_stock);
+                $oldHpp = (float) $material->average_cost;
+                $addedQty = (float) $item['quantity'];
+                $linePrice = (float) $item['total_price'];
+
+                // Moving Average Cost Calculation:
+                // New HPP = ((Old Stock * Old HPP) + Purchase Price) / (Old Stock + Added Qty)
+                if (($oldStock + $addedQty) > 0) {
+                    $newHpp = round((($oldStock * $oldHpp) + $linePrice) / ($oldStock + $addedQty), 2);
+                } else {
+                    $newHpp = $addedQty > 0 ? round($linePrice / $addedQty, 2) : $oldHpp;
+                }
+
+                $material->update(['average_cost' => $newHpp]);
+                $stock->increment('current_stock', $addedQty);
+
+                StockMovement::create([
+                    'outlet_stock_id' => $stock->id,
+                    'type' => 'IN',
+                    'quantity_delta' => $addedQty,
+                    'balance_after' => $stock->current_stock,
+                    'notes' => 'Auto Restock Struk AI: ' . ($validated['merchant_name'] ?? 'Pasar') . " (HPP baru: Rp " . number_format($newHpp, 0, ',', '.') . "/{$material->unit})",
+                ]);
+
+                $totalPurchase += $linePrice;
+                $restockedNames[] = "{$material->name} (+{$addedQty} {$material->unit})";
+            }
+
+            // Catat otomatis ke Arus Kas (Outflow Restock dipotong dari Omzet H-1)
+            if ($request->boolean('record_cashflow', true) && $totalPurchase > 0) {
+                Cashflow::create([
+                    'tenant_id' => $tenant->id,
+                    'outlet_id' => $outlet->id,
+                    'user_id' => $request->user()?->id,
+                    'type' => 'OUTFLOW',
+                    'category' => 'RESTOCK_PURCHASE',
+                    'amount' => $totalPurchase,
+                    'source_account' => 'CASH_DRAWER',
+                    'transaction_date' => now()->toDateString(),
+                    'description' => 'Restock Bahan Struk AI: ' . ($validated['merchant_name'] ?? 'Supplier/Pasar') . ' (' . implode(', ', $restockedNames) . ')',
+                    'receipt_image_path' => $validated['receipt_image_path'] ?? null,
+                    'is_h_minus_one_deduction' => true,
+                ]);
+            }
+        });
+
+        $count = count($validated['items']);
+        return back()->with('status', "Auto Restock berhasil! {$count} bahan baku telah ditambahkan ke stok dan HPP otomatis disesuaikan (Total Belanja: Rp " . number_format($totalPurchase, 0, ',', '.') . ").");
     }
 }

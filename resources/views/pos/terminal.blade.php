@@ -28,31 +28,31 @@
         window.POS_INITIAL_OPEN_BILLS = @json($activeOpenBills ?? []);
     </script>
 </head>
-<body class="h-full antialiased font-sans bg-[#FAF6F0] text-[#292524] select-none overflow-hidden"
+<body class="h-full antialiased font-sans bg-[#F6F4ED] text-[#121212] select-none overflow-hidden"
       x-data="posTerminal()"
       x-init="init()">
 
     <div class="h-screen w-screen flex flex-col overflow-hidden">
-        <!-- 1. Top Bar: SLL Brand Rail with Shift Controls & Open Bills (Responsive) -->
-        <header class="h-12 sm:h-13 bg-[#5B0A14] border-b border-[#4A0710] px-3 sm:px-4 flex items-center justify-between shrink-0 text-white z-30">
+        <!-- 1. Top Bar: SLL Bauhaus Brand Rail with Shift Controls & Open Bills (Responsive) -->
+        <header class="h-12 sm:h-13 bg-[#121212] border-b-2 border-stone-800 px-3 sm:px-4 flex items-center justify-between shrink-0 text-white z-30">
             <!-- Brand & Outlet Info -->
             <div class="flex items-center gap-2 sm:gap-3 min-w-0">
-                <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-[6px] bg-[#EA580C] text-white flex items-center justify-center font-display font-black text-xs shrink-0 tracking-wider">
+                <div class="w-7 h-7 sm:w-8 sm:h-8 bg-[#1D4ED8] border-2 border-[#FACC15] text-[#FACC15] flex items-center justify-center font-display font-black text-xs shrink-0 tracking-wider shadow-[2px_2px_0px_#DC2626]">
                     SLL
                 </div>
                 <div class="min-w-0">
                     <div class="flex items-center gap-1.5 sm:gap-2">
-                        <span class="font-display font-bold text-xs tracking-wide text-white leading-tight truncate">SOTO LAMONGAN LESTARI</span>
-                        <span class="hidden sm:inline-block text-[9px] font-bold px-1.5 py-0.5 rounded-[4px] bg-[#FFB800] text-[#5B0A14] uppercase tracking-wider shrink-0">KASIR</span>
+                        <span class="font-display font-black text-xs tracking-wider text-white leading-tight truncate uppercase">SOTO LAMONGAN LESTARI</span>
+                        <span class="hidden sm:inline-block text-[9px] font-black px-1.5 py-0.5 border border-[#121212] bg-[#FACC15] text-[#121212] uppercase tracking-wider font-mono shrink-0">KASIR</span>
                     </div>
-                    <div class="text-[10px] sm:text-[11px] text-stone-300 font-medium truncate flex items-center gap-1">
+                    <div class="text-[10px] sm:text-[11px] text-stone-300 font-mono truncate flex items-center gap-1">
                         <span>{{ $outlet->name ?? 'Cabang Utama' }}</span>
-                        <span class="text-stone-400">•</span>
+                        <span class="text-stone-500">•</span>
                         <template x-if="activeShift">
-                            <span class="text-emerald-300 font-bold">Shift Aktif (Rp<span x-text="Number(activeShift.start_cash || 0).toLocaleString('id-ID')"></span>)</span>
+                            <span class="text-emerald-400 font-bold">Shift Aktif (Rp<span x-text="Number(activeShift.start_cash || 0).toLocaleString('id-ID')"></span>)</span>
                         </template>
                         <template x-if="!activeShift">
-                            <span class="text-amber-300 font-semibold cursor-pointer underline" @click="startShiftModalOpen = true">Buka Shift Kasir</span>
+                            <span class="text-[#FACC15] font-semibold cursor-pointer underline" @click="startShiftModalOpen = true">Buka Shift Kasir</span>
                         </template>
                     </div>
                 </div>
@@ -64,13 +64,13 @@
                 <button type="button" 
                         @click="openBillsModalOpen = true"
                         class="px-2.5 py-1 text-xs font-semibold rounded-[6px] transition flex items-center gap-1.5 border"
-                        :class="openBills.length > 0 ? 'bg-amber-950/80 border-amber-600 text-amber-300' : 'bg-[#7A0F1C] border-[#941525] text-stone-300 hover:text-white'">
+                        :class="openBills.length > 0 ? 'bg-[#FACC15] border-[#121212] text-[#121212] font-black' : 'bg-stone-900 border-stone-700 text-stone-300 hover:text-white'">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
                     <span>Tagihan (Hold)</span>
-                    <span class="px-1.5 py-0.2 rounded-full text-[10px] font-bold"
-                          :class="openBills.length > 0 ? 'bg-amber-500 text-stone-900' : 'bg-stone-700 text-stone-300'"
+                    <span class="px-1.5 py-0.2 rounded-none text-[10px] font-black font-mono border border-black"
+                          :class="openBills.length > 0 ? 'bg-[#1D4ED8] text-white' : 'bg-stone-800 text-stone-300'"
                           x-text="openBills.length"></span>
                 </button>
 
@@ -125,7 +125,7 @@
                 </button>
 
                 <!-- Backoffice Link -->
-                <a href="{{ route('dashboard') }}" class="px-2.5 sm:px-3 py-1.5 text-xs font-bold text-white bg-[#EA580C] hover:bg-[#D94E07] rounded-[6px] transition flex items-center gap-1 active:translate-y-px">
+                <a href="{{ route('dashboard') }}" class="bauhaus-btn-blue text-xs">
                     <span>Backoffice</span>
                 </a>
             </div>
@@ -134,7 +134,7 @@
         <!-- 2. Workspace: Catalog Center + Pinned Order Panel Right (>= lg) -->
         <main class="flex-1 flex overflow-hidden relative">
             <!-- Center: Product Catalog -->
-            <div class="flex-1 w-full flex flex-col p-2.5 sm:p-4 overflow-hidden bg-[#FAF6F0]">
+            <div class="flex-1 w-full flex flex-col p-2.5 sm:p-4 overflow-hidden bg-[#F6F4ED]">
                 
                 <!-- Search & Category Header -->
                 <div class="shrink-0 space-y-2 mb-2.5 sm:mb-3">

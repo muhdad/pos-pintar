@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Backoffice\BackofficeController;
+use App\Http\Controllers\Backoffice\CashflowController;
 use App\Http\Controllers\Backoffice\UserController;
 use App\Http\Controllers\Pos\PosTerminalController;
 use App\Http\Controllers\ProfileController;
@@ -17,8 +18,8 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
-// Backoffice Routes (Protected by Auth & RBAC: Superadmin, Owner, Manager Only)
-Route::middleware(['auth', 'verified', 'role:SUPERADMIN,OWNER,MANAGER'])->group(function () {
+// Backoffice Routes (Protected by Auth & RBAC: Superadmin, Owner, Manager, Finance)
+Route::middleware(['auth', 'verified', 'role:SUPERADMIN,OWNER,MANAGER,FINANCE'])->group(function () {
     Route::get('/dashboard', [BackofficeController::class, 'dashboard'])->name('dashboard');
 
     Route::prefix('backoffice')->name('backoffice.')->group(function () {
@@ -40,11 +41,21 @@ Route::middleware(['auth', 'verified', 'role:SUPERADMIN,OWNER,MANAGER'])->group(
         Route::delete('/inventory/raw-material/{rawMaterial}', [BackofficeController::class, 'destroyRawMaterial'])->name('inventory.raw-material.destroy');
         Route::post('/inventory/restock', [BackofficeController::class, 'restockInventory'])->name('inventory.restock');
         Route::post('/inventory/opname', [BackofficeController::class, 'recordOpname'])->name('inventory.opname');
+        Route::post('/inventory/ocr-scan', [BackofficeController::class, 'scanReceiptOcr'])->name('inventory.ocr-scan');
+        Route::post('/inventory/ocr-confirm', [BackofficeController::class, 'confirmOcrRestock'])->name('inventory.ocr-confirm');
 
         // Riwayat Transaksi, Export CSV & Void
         Route::get('/orders', [BackofficeController::class, 'orders'])->name('orders');
         Route::get('/orders/export-csv', [BackofficeController::class, 'exportOrdersCsv'])->name('orders.export-csv');
         Route::post('/orders/{order}/void', [BackofficeController::class, 'voidOrderBackoffice'])->name('orders.void');
+
+        // Modul Keuangan & Arus Kas (Hanya Superadmin, Owner, dan Finance)
+        Route::middleware(['role:SUPERADMIN,OWNER,FINANCE'])->group(function () {
+            Route::get('/cashflow', [CashflowController::class, 'index'])->name('cashflow.index');
+            Route::post('/cashflow/expense', [CashflowController::class, 'storeExpense'])->name('cashflow.expense');
+            Route::post('/cashflow/income', [CashflowController::class, 'storeIncome'])->name('cashflow.income');
+            Route::delete('/cashflow/{cashflow}', [CashflowController::class, 'destroy'])->name('cashflow.destroy');
+        });
 
         // AI Business Consultant
         Route::get('/ai-consultant', [BackofficeController::class, 'aiConsultant'])->name('ai-consultant');

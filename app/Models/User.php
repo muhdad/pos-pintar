@@ -87,6 +87,11 @@ class User extends Authenticatable
         return in_array($this->role, ['SUPERADMIN', 'OWNER']);
     }
 
+    public function isFinance(): bool
+    {
+        return in_array($this->role, ['SUPERADMIN', 'OWNER', 'FINANCE']);
+    }
+
     public function isManager(): bool
     {
         return in_array($this->role, ['SUPERADMIN', 'OWNER', 'MANAGER']);
@@ -94,6 +99,6 @@ class User extends Authenticatable
 
     public function isCashier(): bool
     {
-        return in_array($this->role, ['SUPERADMIN', 'OWNER', 'MANAGER', 'CASHIER']);
+        return in_array($this->role, ['SUPERADMIN', 'OWNER', 'MANAGER', 'FINANCE', 'CASHIER']);
     }
 }
