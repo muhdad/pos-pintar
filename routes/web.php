@@ -80,6 +80,7 @@ Route::middleware(['auth', 'verified', 'role:SUPERADMIN,OWNER,MANAGER,FINANCE'])
 // POS Terminal Route (Fullscreen Layout)
 Route::middleware(['auth'])->prefix('pos')->group(function () {
     Route::get('/', [PosTerminalController::class, 'index'])->name('pos.index');
+    Route::get('/customer-display', [PosTerminalController::class, 'customerDisplay'])->name('pos.customer-display');
 });
 
 Route::middleware('auth')->group(function () {

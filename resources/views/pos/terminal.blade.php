@@ -622,9 +622,9 @@
                             Tunai
                         </button>
                         <button type="button"
-                                @click="selectedPaymentMethod = 'QRIS'"
+                                @click="selectedPaymentMethod = 'QRIS'; generateQris();"
                                 class="py-2 rounded-[6px] border text-center transition"
-                                :class="selectedPaymentMethod === 'QRIS' ? 'border-[#EA580C] bg-orange-50 text-[#C2410C] font-bold' : 'border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100'">
+                                :class="selectedPaymentMethod === 'QRIS' ? 'border-[#121212] bg-[#FACC15] text-[#121212] font-black shadow-[2px_2px_0px_#121212]' : 'border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100'">
                             QRIS
                         </button>
                         <button type="button"
@@ -674,6 +674,60 @@
                         </div>
                     </div>
 
+                    <!-- Mode QRIS: Tampilan QR Code Dinamis Otomatis Nominal -->
+                    <div x-show="selectedPaymentMethod === 'QRIS'" class="space-y-3 bg-[#F6F4ED] p-3.5 border-2 border-[#121212] shadow-[3px_3px_0px_#121212] text-center">
+                        <!-- Header QRIS Resmi -->
+                        <div class="flex items-center justify-between border-b-2 border-stone-800 pb-2">
+                            <div class="flex items-center gap-1.5">
+                                <span class="bg-[#DC2626] text-white px-1.5 py-0.5 text-[9px] font-black tracking-widest font-mono">QRIS</span>
+                                <span class="bg-[#1D4ED8] text-white px-1 py-0.5 text-[8px] font-black font-mono">GPN</span>
+                            </div>
+                            <span class="text-[9px] font-black font-mono uppercase text-emerald-800 bg-emerald-100 border border-emerald-600 px-1.5 py-0.5">
+                                🟢 NOMINAL TERKUNCI OTOMATIS
+                            </span>
+                        </div>
+
+                        <!-- Merchant & Amount Info -->
+                        <div>
+                            <span class="text-[10px] font-black uppercase tracking-wider text-stone-600 font-mono block">SOTO LAMONGAN LESTARI</span>
+                            <div class="text-2xl sm:text-3xl font-display font-black text-[#121212] font-mono tracking-tight my-1">
+                                Rp<span x-text="Number(finalTotal).toLocaleString('id-ID')"></span>
+                            </div>
+                            <span class="text-[9px] text-stone-600 font-mono block">
+                                Nominal tagihan telah otomatis terisi. Pelanggan cukup scan & masukkan PIN tanpa perlu ketik nominal!
+                            </span>
+                        </div>
+
+                        <!-- QR Code Canvas Display -->
+                        <div class="p-2.5 bg-white border-2 border-[#121212] shadow-[2px_2px_0px_#121212] inline-block mx-auto relative">
+                            <canvas id="qris-pos-canvas" class="mx-auto block"></canvas>
+                            
+                            <!-- Timer & Refresh -->
+                            <div class="mt-2 pt-1 border-t border-stone-200 flex items-center justify-between text-[10px] font-mono text-stone-500">
+                                <span>Berlaku: <strong class="text-red-600" x-text="qrisTimerFormatted"></strong></span>
+                                <button type="button" @click="generateQris()" class="text-[#1D4ED8] font-bold hover:underline">
+                                    🔄 Refresh QR
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Action Bar: Customer Display & Settings -->
+                        <div class="flex items-center justify-center gap-2 pt-1">
+                            <button type="button" 
+                                    @click="openCustomerDisplay()" 
+                                    class="bauhaus-btn-blue text-[10px] py-1 px-2.5">
+                                <span>🖥️ Layar Pelanggan</span>
+                            </button>
+
+                            <button type="button" 
+                                    @click="openQrisSettings()" 
+                                    class="bauhaus-btn-white text-[10px] py-1 px-2 text-stone-600"
+                                    title="Atur String QRIS Statis Toko">
+                                <span>⚙️ Atur QRIS</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Mode MULTI: Kombinasi Pembayaran Tunai + Non Tunai (Split Bill) -->
                     <div x-show="selectedPaymentMethod === 'MULTI'" class="space-y-2.5 bg-orange-50/50 p-3 rounded-[8px] border border-orange-200">
                         <span class="text-[10px] font-bold uppercase tracking-wider text-stone-600 block">Kombinasi Pembayaran (Split Bill)</span>
@@ -714,6 +768,13 @@
                                        placeholder="0"
                                        class="w-full bg-white border border-stone-300 rounded-[6px] pl-9 pr-3 py-1 text-xs font-bold font-mono tabular-nums focus:outline-none focus:ring-1 focus:ring-[#EA580C]">
                             </div>
+                            <template x-if="multiNonCashMethod === 'QRIS' && multiNonCashAmount > 0">
+                                <button type="button" 
+                                        @click="generateQris()"
+                                        class="mt-1 text-[10px] text-[#1D4ED8] font-bold hover:underline block font-mono">
+                                    📱 Tampilkan QRIS Non-Tunai (Rp<span x-text="Number(multiNonCashAmount).toLocaleString('id-ID')"></span>)
+                                </button>
+                            </template>
                         </div>
 
                         <!-- Ringkasan Split -->
@@ -752,6 +813,49 @@
                             class="w-full h-11 rounded-[6px] bg-[#EA580C] hover:bg-[#D94E07] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs tracking-wider uppercase transition shadow-subtle flex items-center justify-center gap-1.5 active:translate-y-px">
                         <span x-text="isProcessingCheckout ? 'Menyimpan Transaksi...' : 'Selesaikan Pembayaran'"></span>
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- QRIS Settings Modal -->
+        <div x-show="qrisSettingsModalOpen" 
+             class="fixed inset-0 bg-stone-900/60 z-50 flex items-center justify-center p-3 sm:p-4" 
+             x-cloak>
+            <div class="bauhaus-card max-w-md w-full p-5 bg-white shadow-modal animate-in fade-in"
+                 @click.outside="qrisSettingsModalOpen = false">
+                <div class="flex items-center justify-between pb-2.5 border-b-2 border-stone-900 mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 bg-[#1D4ED8] border border-black"></span>
+                        <h3 class="text-sm font-display font-black text-[#121212] uppercase tracking-wide">
+                            Pengaturan QRIS Toko
+                        </h3>
+                    </div>
+                    <button type="button" @click="qrisSettingsModalOpen = false" class="text-stone-900 hover:text-red-600 font-black p-1">✕</button>
+                </div>
+
+                <div class="space-y-3 text-xs">
+                    <p class="text-stone-600 leading-relaxed">
+                        Masukkan string payload QRIS statis dari rekening bank/merchant Anda (misal: BCA, Mandiri, BRI, ShopeePay, Nobu, atau Midtrans). 
+                        Sistem POS otomatis mengubahnya menjadi <strong>QRIS Dinamis</strong> ber-nominal otomatis saat checkout!
+                    </p>
+
+                    <div>
+                        <label class="block font-black text-stone-700 uppercase font-mono text-[10px] mb-1">
+                            String Payload QRIS Statis Toko:
+                        </label>
+                        <textarea x-model="customQrisInput" 
+                                  rows="4" 
+                                  placeholder="000201010211..." 
+                                  class="bauhaus-input w-full font-mono text-[10px]"></textarea>
+                        <span class="text-[9px] text-stone-400 font-mono mt-1 block">
+                            *Kosongkan untuk menggunakan template resmi default Soto Lamongan Lestari.
+                        </span>
+                    </div>
+
+                    <div class="pt-2 flex justify-end gap-2 border-t-2 border-stone-200">
+                        <button type="button" @click="qrisSettingsModalOpen = false" class="bauhaus-btn-white">Batal</button>
+                        <button type="button" @click="saveQrisSettings()" class="bauhaus-btn-blue font-bold">Simpan Pengaturan</button>
+                    </div>
                 </div>
             </div>
         </div>

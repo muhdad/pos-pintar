@@ -77,4 +77,16 @@ class PosTerminalController extends Controller
 
         return view('pos.terminal', compact('tenant', 'outlet', 'shift', 'tables', 'activeOpenBills', 'categories', 'products', 'stocks'));
     }
+
+    /**
+     * Tampilkan Layar Pelanggan (Customer Facing Display) Fullscreen untuk QRIS Dinamis & Struk Pesanan.
+     */
+    public function customerDisplay(Request $request): View
+    {
+        $user = $request->user();
+        $tenant = $user?->tenant ?? Tenant::first();
+        $outlet = $tenant?->outlets()->first() ?? Outlet::first();
+
+        return view('pos.customer-display', compact('tenant', 'outlet'));
+    }
 }

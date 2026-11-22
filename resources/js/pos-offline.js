@@ -82,6 +82,13 @@ export function posTerminal() {
         multiNonCashAmount: 0,
         multiNonCashMethod: 'QRIS',
 
+        // QRIS Dinamis Otomatis Nominal
+        qrisTimerSeconds: 300,
+        qrisTimerInterval: null,
+        currentDynamicQrisString: '',
+        qrisSettingsModalOpen: false,
+        customQrisInput: '',
+
         // Shift Kasir
         activeShift: null,
         startCash: 0,
@@ -341,6 +348,7 @@ export function posTerminal() {
                     recipes: product.recipes || []
                 });
             }
+            this.syncCustomerCart();
         },
 
         // Ubah kuantitas item
@@ -351,6 +359,21 @@ export function posTerminal() {
             } else {
                 this.cart[index].subtotal = this.cart[index].quantity * this.cart[index].unit_price;
             }
+            this.syncCustomerCart();
+        },
+
+        // Sinkronisasi rincian keranjang ke Layar Pelanggan (Customer Display)
+        syncCustomerCart() {
+            window.QRIS_HELPER?.broadcastToCustomerDisplay({
+                type: 'CART_UPDATED',
+                items: this.cart,
+                subtotal: this.subtotal,
+                taxAmount: this.taxAmount,
+                discount: this.discount,
+                finalTotal: this.finalTotal,
+                orderType: this.orderType,
+                tableName: this.selectedTableName
+            });
         },
 
         // Perhitungan subtotal, PPN, dan grand total
@@ -435,6 +458,76 @@ export function posTerminal() {
             this.cashGiven = this.finalTotal;
             this.multiCashAmount = 0;
             this.multiNonCashAmount = this.finalTotal;
+            if (this.selectedPaymentMethod === 'QRIS' || (this.selectedPaymentMethod === 'MULTI' && this.multiNonCashMethod === 'QRIS')) {
+                this.$nextTick(() => {
+                    this.generateQris();
+                });
+            }
+        },
+
+        // Generate QRIS Dinamis Otomatis Nominal
+        generateQris() {
+            const amount = this.selectedPaymentMethod === 'MULTI'
+                ? (Number(this.multiNonCashAmount) || 0)
+                : this.finalTotal;
+
+            if (amount <= 0) return;
+
+            const baseStatic = window.QRIS_HELPER?.getBaseQrisPayload() || '';
+            this.currentDynamicQrisString = window.QRIS_HELPER?.convertToDynamicQris(baseStatic, amount) || '';
+
+            // Timer mundur 5 menit
+            this.qrisTimerSeconds = 300;
+            if (this.qrisTimerInterval) clearInterval(this.qrisTimerInterval);
+            this.qrisTimerInterval = setInterval(() => {
+                if (this.qrisTimerSeconds > 0) {
+                    this.qrisTimerSeconds--;
+                } else {
+                    clearInterval(this.qrisTimerInterval);
+                }
+            }, 1000);
+
+            // Render ke canvas QRIS di layar POS
+            this.$nextTick(() => {
+                const canvas = document.getElementById('qris-pos-canvas');
+                if (canvas && this.currentDynamicQrisString && window.QRIS_HELPER) {
+                    window.QRIS_HELPER.renderQrisCanvas(canvas, this.currentDynamicQrisString);
+                }
+            });
+
+            // Kirim sync ke Layar Pelanggan (Customer Display)
+            window.QRIS_HELPER?.broadcastToCustomerDisplay({
+                type: 'SHOW_QRIS',
+                amount: amount,
+                dynamicQris: this.currentDynamicQrisString,
+                items: this.cart,
+                orderType: this.orderType,
+                tableName: this.selectedTableName,
+                finalTotal: this.finalTotal
+            });
+        },
+
+        get qrisTimerFormatted() {
+            const mins = Math.floor(this.qrisTimerSeconds / 60);
+            const secs = this.qrisTimerSeconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        },
+
+        openCustomerDisplay() {
+            window.open('/pos/customer-display', 'CustomerDisplay', 'width=960,height=720,menubar=no,toolbar=no,location=no,status=no');
+        },
+
+        openQrisSettings() {
+            this.customQrisInput = window.QRIS_HELPER?.getBaseQrisPayload() || '';
+            this.qrisSettingsModalOpen = true;
+        },
+
+        saveQrisSettings() {
+            if (this.customQrisInput) {
+                window.QRIS_HELPER?.setCustomQrisPayload(this.customQrisInput);
+            }
+            this.qrisSettingsModalOpen = false;
+            this.generateQris();
         },
 
         // ----------------------------------------------------
@@ -711,6 +804,15 @@ export function posTerminal() {
                 if (window.thermalPrinter?.isConnected) {
                     window.thermalPrinter.printReceipt(this.completedOrder);
                 }
+
+                // Broadcast ke Customer Display bahwa pembayaran sukses
+                window.QRIS_HELPER?.broadcastToCustomerDisplay({
+                    type: 'PAYMENT_SUCCESS',
+                    order: this.completedOrder,
+                    changeDue: this.changeDue
+                });
+
+                if (this.qrisTimerInterval) clearInterval(this.qrisTimerInterval);
 
                 // Reset state transaksi
                 this.cart = [];

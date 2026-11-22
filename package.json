@@ -19,6 +19,7 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
-        "dexie": "^4.4.7"
+        "dexie": "^4.4.7",
+        "qrcode": "^1.5.4"
     }
 }
