@@ -141,6 +141,16 @@
                     </button>
                 </form>
 
+                <!-- Export Excel Menu & HPP Button -->
+                <a href="{{ route('backoffice.products.export-excel') }}" 
+                   class="px-3 py-1.5 rounded-[4px] bg-[#FACC15] hover:bg-yellow-400 text-[#121212] font-black text-xs transition flex items-center gap-1.5 border-2 border-[#121212] shadow-[2px_2px_0px_#121212] active:translate-x-0.5 active:translate-y-0.5"
+                   title="Export Seluruh Menu & HPP Resep ke File Excel">
+                    <svg class="w-3.5 h-3.5 text-[#121212]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>📥 Export Excel (.xls)</span>
+                </a>
+
                 <!-- Tambah Kategori Button -->
                 <button type="button" 
                         @click="categoryModalOpen = true"

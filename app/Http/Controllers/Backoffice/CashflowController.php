@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Cashflow;
 use App\Models\Outlet;
 use App\Models\Tenant;
+use App\Services\Export\ExcelExportService;
 use App\Services\Finance\CashflowService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CashflowController extends Controller
 {
@@ -142,5 +144,118 @@ class CashflowController extends Controller
 
         return redirect()->route('backoffice.cashflow.index')
             ->with('status', "Catatan mutasi '{$desc}' (Rp " . number_format($amount, 0, ',', '.') . ') berhasil dihapus.');
+    }
+
+    /**
+     * Export Laporan Arus Kas & Keuangan ke File Excel (.xls).
+     */
+    public function exportExcel(Request $request, ExcelExportService $excelService): StreamedResponse
+    {
+        $tenant = $request->user()?->tenant ?? Tenant::first();
+        $outlet = $tenant?->outlets()->first() ?? Outlet::first();
+
+        $query = Cashflow::with('user')
+            ->where('outlet_id', $outlet->id);
+
+        if ($type = $request->input('type')) {
+            $query->where('type', $type);
+        }
+        if ($category = $request->input('category')) {
+            $query->where('category', $category);
+        }
+        if ($date = $request->input('date')) {
+            $query->whereDate('transaction_date', $date);
+        }
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('description', 'like', "%{$search}%")
+                    ->orWhere('reference_id', 'like', "%{$search}%");
+            });
+        }
+
+        $mutations = $query->orderBy('transaction_date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $totalInflow = (float) $mutations->where('type', 'INFLOW')->sum('amount');
+        $totalOutflow = (float) $mutations->where('type', 'OUTFLOW')->sum('amount');
+        $netCash = $totalInflow - $totalOutflow;
+        $totalH1Deduction = (float) $mutations->where('is_h_minus_one_deduction', true)->sum('amount');
+
+        $headers = [
+            'No',
+            'Tanggal',
+            'Waktu',
+            'Tipe',
+            'Kategori',
+            'Nominal (Rp)',
+            'Potong Omzet H-1',
+            'Sumber Akun Kas',
+            'Keterangan / Transaksi',
+            'Dicatat Oleh'
+        ];
+
+        $categoryLabels = [
+            'RESTOCK_PURCHASE' => 'Belanja Bahan Baku',
+            'OPERATIONAL' => 'Operasional Resto',
+            'SALARY' => 'Gaji & Upah Karyawan',
+            'PETTY_CASH' => 'Kas Kecil Kasir',
+            'CAPITAL_INJECTION' => 'Tambahan Modal Pemilik',
+            'SALES_DEPOSIT' => 'Setoran Penjualan Kasir',
+            'OTHER_INCOME' => 'Pemasukan Lainnya',
+            'OTHER_EXPENSE' => 'Pengeluaran Lainnya',
+        ];
+
+        $rows = [];
+        foreach ($mutations as $i => $m) {
+            $isIncome = ($m->type === 'INFLOW');
+            $rows[] = [
+                ['value' => $i + 1, 'type' => 'center'],
+                ['value' => $m->transaction_date ? date('d/m/Y', strtotime($m->transaction_date)) : '-', 'type' => 'center'],
+                ['value' => $m->created_at ? $m->created_at->format('H:i') : '-', 'type' => 'center'],
+                [
+                    'value' => $isIncome ? 'PEMASUKAN' : 'PENGELUARAN',
+                    'type' => $isIncome ? 'badge-in' : 'badge-out'
+                ],
+                ['value' => $categoryLabels[$m->category] ?? $m->category, 'type' => 'text'],
+                [
+                    'value' => (float) $m->amount,
+                    'type' => 'num'
+                ],
+                [
+                    'value' => $m->is_h_minus_one_deduction ? 'YA (Dipotong H-1)' : 'TIDAK',
+                    'type' => $m->is_h_minus_one_deduction ? 'badge-warn' : 'center'
+                ],
+                ['value' => $m->source_account ?? 'CASH_DRAWER', 'type' => 'text'],
+                ['value' => $m->description ?? '-', 'type' => 'text'],
+                ['value' => $m->user?->name ?? 'Admin', 'type' => 'text'],
+            ];
+        }
+
+        $totals = [
+            ['value' => 'TOTAL', 'type' => 'center'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => 'Kas Bersih: ' . ($netCash >= 0 ? '+' : '-') . 'Rp ' . number_format(abs($netCash), 0, ',', '.'), 'type' => 'text'],
+            ['value' => (float) $netCash, 'type' => 'currency'],
+            ['value' => 'Dipotong H-1: Rp ' . number_format($totalH1Deduction, 0, ',', '.'), 'type' => 'text'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => '', 'type' => 'text'],
+        ];
+
+        $summary = [
+            'Total Pemasukan' => 'Rp ' . number_format($totalInflow, 0, ',', '.'),
+            'Total Pengeluaran' => 'Rp ' . number_format($totalOutflow, 0, ',', '.'),
+            'Saldo Kas Bersih' => ($netCash >= 0 ? '+' : '-') . 'Rp ' . number_format(abs($netCash), 0, ',', '.'),
+            'Total Belanja Potong H-1' => 'Rp ' . number_format($totalH1Deduction, 0, ',', '.'),
+        ];
+
+        $filename = 'Laporan_Arus_Kas_' . date('Ymd_His') . '.xls';
+        $title = 'LAPORAN ARUS KAS & KEUANGAN - ' . strtoupper($outlet->name ?? 'SOTO LAMONGAN LESTARI');
+        $subtitle = 'Dicetak pada: ' . now()->translatedFormat('d F Y H:i') . ' WIB | Outlet: ' . ($outlet->name ?? 'Cabang Utama');
+
+        return $excelService->download($filename, $title, $subtitle, $summary, $headers, $rows, $totals);
     }
 }

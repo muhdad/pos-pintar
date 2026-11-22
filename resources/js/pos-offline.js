@@ -66,7 +66,7 @@ export function posTerminal() {
         // State Transaksi & Keranjang
         cart: [],
         discount: 0,
-        taxPercent: 11, // PPN 11%
+        taxPercent: 0, // Tanpa Pajak (0%)
         orderType: 'DINE_IN', // DINE_IN, TAKE_AWAY, GOFOOD, GRABFOOD, SHOPEEFOOD
         selectedTableId: '',
         selectedTableName: '',
@@ -375,18 +375,17 @@ export function posTerminal() {
             });
         },
 
-        // Perhitungan subtotal, PPN, dan grand total
+        // Perhitungan subtotal dan grand total (Tanpa Pajak)
         get subtotal() {
             return this.cart.reduce((sum, item) => sum + item.subtotal, 0);
         },
 
         get taxAmount() {
-            const taxable = Math.max(0, this.subtotal - this.discount);
-            return Math.round(taxable * (this.taxPercent / 100));
+            return 0;
         },
 
         get finalTotal() {
-            return Math.max(0, this.subtotal - this.discount + this.taxAmount);
+            return Math.max(0, this.subtotal - this.discount);
         },
 
         // Perhitungan kembalian tunai & multi-payment

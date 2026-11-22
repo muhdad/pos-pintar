@@ -16,20 +16,26 @@
                 <p class="text-xs text-stone-500 mt-0.5">Daftar rekonsiliasi seluruh transaksi kasir online dan offline yang telah tersinkronisasi.</p>
             </div>
             <div class="flex items-center gap-2">
-                <!-- Export CSV / Excel Button -->
-                <a href="{{ route('backoffice.orders.export-csv') }}" 
-                   class="px-3 py-1.5 rounded-[6px] bg-[#5B0A14] hover:bg-[#7A0F1C] text-white font-semibold text-xs transition flex items-center gap-1.5 shadow-subtle active:translate-y-px">
-                    <svg class="w-3.5 h-3.5 text-[#FFB800]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <!-- Export Excel Button -->
+                <a href="{{ route('backoffice.orders.export-excel', request()->query()) }}" 
+                   class="px-3 py-1.5 rounded-[4px] bg-[#FACC15] hover:bg-yellow-400 text-[#121212] font-black text-xs transition flex items-center gap-1.5 border-2 border-[#121212] shadow-[2px_2px_0px_#121212] active:translate-x-0.5 active:translate-y-0.5">
+                    <svg class="w-3.5 h-3.5 text-[#121212]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <span>Export CSV / Excel</span>
+                    <span>📥 Export Excel (.xls)</span>
                 </a>
 
-                <a href="{{ route('pos.index') }}" class="px-3.5 py-1.5 rounded-[6px] bg-[#EA580C] hover:bg-[#D94E07] text-white font-bold text-xs tracking-wide transition shadow-subtle flex items-center gap-1.5 active:translate-y-px">
+                <!-- Export CSV Button -->
+                <a href="{{ route('backoffice.orders.export-csv', request()->query()) }}" 
+                   class="px-3 py-1.5 rounded-[4px] bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs transition flex items-center gap-1.5 border border-stone-300">
+                    <span>CSV</span>
+                </a>
+
+                <a href="{{ route('pos.index') }}" class="px-3.5 py-1.5 rounded-[4px] bg-[#EA580C] hover:bg-[#D94E07] text-white font-bold text-xs tracking-wide transition border-2 border-[#121212] shadow-[2px_2px_0px_#121212] flex items-center gap-1.5 active:translate-x-0.5 active:translate-y-0.5">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
-                    <span>Transaksi Baru (POS)</span>
+                    <span>Kasir POS (F2)</span>
                 </a>
             </div>
         </div>
@@ -163,8 +169,8 @@
                             <span>Subtotal:</span>
                             <span class="font-mono tabular-nums text-stone-800" x-text="'Rp' + Number(selectedOrder?.total_amount || 0).toLocaleString('id-ID')"></span>
                         </div>
-                        <div class="flex justify-between text-stone-500">
-                            <span>Pajak (PPN 11%):</span>
+                        <div class="flex justify-between text-stone-500" x-show="Number(selectedOrder?.tax_amount || 0) > 0">
+                            <span>Pajak:</span>
                             <span class="font-mono tabular-nums text-stone-800" x-text="'Rp' + Number(selectedOrder?.tax_amount || 0).toLocaleString('id-ID')"></span>
                         </div>
                         <div class="flex justify-between text-xs font-bold text-stone-900 pt-1.5 border-t border-stone-200">
@@ -253,8 +259,8 @@
                     <span>Diskon</span>
                     <span x-text="`-${Number(selectedOrder?.discount_amount || 0).toLocaleString('id-ID')}`"></span>
                 </div>
-                <div class="flex justify-between">
-                    <span>PPN (11%)</span>
+                <div class="flex justify-between" x-show="Number(selectedOrder?.tax_amount || 0) > 0">
+                    <span>Pajak</span>
                     <span x-text="Number(selectedOrder?.tax_amount || 0).toLocaleString('id-ID')"></span>
                 </div>
                 <div class="flex justify-between font-bold text-xs pt-1 border-t border-dotted border-black">

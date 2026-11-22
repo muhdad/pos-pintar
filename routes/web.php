@@ -25,6 +25,7 @@ Route::middleware(['auth', 'verified', 'role:SUPERADMIN,OWNER,MANAGER,FINANCE'])
     Route::prefix('backoffice')->name('backoffice.')->group(function () {
         // Katalog Produk & Kategori
         Route::get('/products', [BackofficeController::class, 'products'])->name('products');
+        Route::get('/products/export-excel', [BackofficeController::class, 'exportProductsExcel'])->name('products.export-excel');
         Route::post('/products', [BackofficeController::class, 'storeProduct'])->name('products.store');
         Route::put('/products/{product}', [BackofficeController::class, 'updateProduct'])->name('products.update');
         Route::delete('/products/{product}', [BackofficeController::class, 'destroyProduct'])->name('products.destroy');
@@ -36,6 +37,7 @@ Route::middleware(['auth', 'verified', 'role:SUPERADMIN,OWNER,MANAGER,FINANCE'])
 
         // Bahan Baku, Stok Gudang & Stock Opname
         Route::get('/inventory', [BackofficeController::class, 'inventory'])->name('inventory');
+        Route::get('/inventory/export-excel', [BackofficeController::class, 'exportInventoryExcel'])->name('inventory.export-excel');
         Route::post('/inventory/raw-material', [BackofficeController::class, 'storeRawMaterial'])->name('inventory.raw-material.store');
         Route::put('/inventory/raw-material/{rawMaterial}', [BackofficeController::class, 'updateRawMaterial'])->name('inventory.raw-material.update');
         Route::delete('/inventory/raw-material/{rawMaterial}', [BackofficeController::class, 'destroyRawMaterial'])->name('inventory.raw-material.destroy');
@@ -44,14 +46,16 @@ Route::middleware(['auth', 'verified', 'role:SUPERADMIN,OWNER,MANAGER,FINANCE'])
         Route::post('/inventory/ocr-scan', [BackofficeController::class, 'scanReceiptOcr'])->name('inventory.ocr-scan');
         Route::post('/inventory/ocr-confirm', [BackofficeController::class, 'confirmOcrRestock'])->name('inventory.ocr-confirm');
 
-        // Riwayat Transaksi, Export CSV & Void
+        // Riwayat Transaksi, Export CSV/Excel & Void
         Route::get('/orders', [BackofficeController::class, 'orders'])->name('orders');
         Route::get('/orders/export-csv', [BackofficeController::class, 'exportOrdersCsv'])->name('orders.export-csv');
+        Route::get('/orders/export-excel', [BackofficeController::class, 'exportOrdersExcel'])->name('orders.export-excel');
         Route::post('/orders/{order}/void', [BackofficeController::class, 'voidOrderBackoffice'])->name('orders.void');
 
         // Modul Keuangan & Arus Kas (Hanya Superadmin, Owner, dan Finance)
         Route::middleware(['role:SUPERADMIN,OWNER,FINANCE'])->group(function () {
             Route::get('/cashflow', [CashflowController::class, 'index'])->name('cashflow.index');
+            Route::get('/cashflow/export-excel', [CashflowController::class, 'exportExcel'])->name('cashflow.export-excel');
             Route::post('/cashflow/expense', [CashflowController::class, 'storeExpense'])->name('cashflow.expense');
             Route::post('/cashflow/income', [CashflowController::class, 'storeIncome'])->name('cashflow.income');
             Route::delete('/cashflow/{cashflow}', [CashflowController::class, 'destroy'])->name('cashflow.destroy');

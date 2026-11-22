@@ -176,7 +176,9 @@ export class ThermalPrinter {
         if (order.discount_amount > 0) {
             buffer.push(...encoder.encode(formatRow('Diskon', '-' + Number(order.discount_amount).toLocaleString('id-ID'))));
         }
-        buffer.push(...encoder.encode(formatRow('PPN (11%)', Number(order.tax_amount || 0).toLocaleString('id-ID'))));
+        if (Number(order.tax_amount || 0) > 0) {
+            buffer.push(...encoder.encode(formatRow('Pajak', Number(order.tax_amount).toLocaleString('id-ID'))));
+        }
 
         buffer.push(ESC, 0x45, 0x01); // Bold on
         buffer.push(...encoder.encode(formatRow('TOTAL', 'Rp' + Number(order.final_amount || 0).toLocaleString('id-ID'))));

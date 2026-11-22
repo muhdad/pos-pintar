@@ -17,6 +17,7 @@ use App\Models\Tenant;
 use App\Services\Ai\AiConsultantService;
 use App\Services\Ai\BusinessDataAggregator;
 use App\Services\Ai\ReceiptOcrService;
+use App\Services\Export\ExcelExportService;
 use App\Services\Pos\InventoryDeductionService;
 use App\Services\Pos\OrderService;
 use Illuminate\Http\JsonResponse;
@@ -588,7 +589,7 @@ class BackofficeController extends Controller
                 'Daftar Menu & Qty',
                 'Subtotal (Rp)',
                 'Diskon (Rp)',
-                'PPN 11% (Rp)',
+                'Pajak (Rp)',
                 'Total Akhir (Rp)',
                 'Metode Pembayaran',
                 'Catatan',
@@ -1029,5 +1030,267 @@ class BackofficeController extends Controller
         $outlet->update($updateData);
 
         return back()->with('status', 'Pengaturan outlet dan QRIS toko berhasil disimpan!');
+    }
+
+    /**
+     * Export Laporan Stok Gudang & Valuasi Bahan Baku ke Format Excel (.xls).
+     */
+    public function exportInventoryExcel(Request $request, ExcelExportService $excelService): StreamedResponse
+    {
+        $tenant = $request->user()?->tenant ?? Tenant::first();
+        $outlet = $tenant?->outlets()->first() ?? Outlet::first();
+
+        $rawMaterials = RawMaterial::where('tenant_id', $tenant->id)
+            ->with(['outletStocks' => fn ($q) => $q->where('outlet_id', $outlet->id)])
+            ->get();
+
+        $totalValuation = 0;
+        $totalItems = $rawMaterials->count();
+        $lowStockCount = 0;
+
+        $headers = [
+            'No',
+            'Kode SKU',
+            'Nama Bahan Baku',
+            'Stok Fisik Saat Ini',
+            'Satuan Unit',
+            'Stok Minimum',
+            'HPP Rata-rata per Unit (Rp)',
+            'Total Nilai Aset Stok (Rp)',
+            'Status Stok Gudang'
+        ];
+
+        $rows = [];
+        foreach ($rawMaterials as $i => $rm) {
+            $currentStock = (float) ($rm->outletStocks->first()->current_stock ?? 0);
+            $minStock = (float) $rm->minimum_stock;
+            $avgCost = (float) $rm->average_cost;
+            $lineValuation = $currentStock * $avgCost;
+            $totalValuation += $lineValuation;
+
+            $statusText = 'AMAN';
+            $statusType = 'badge-in';
+            if ($currentStock <= 0) {
+                $statusText = 'HABIS (0)';
+                $statusType = 'badge-out';
+                $lowStockCount++;
+            } elseif ($currentStock <= $minStock) {
+                $statusText = 'MENIPIS';
+                $statusType = 'badge-warn';
+                $lowStockCount++;
+            }
+
+            $rows[] = [
+                ['value' => $i + 1, 'type' => 'center'],
+                ['value' => $rm->sku ?? '-', 'type' => 'text'],
+                ['value' => $rm->name, 'type' => 'text'],
+                ['value' => $currentStock, 'type' => 'num'],
+                ['value' => $rm->unit, 'type' => 'center'],
+                ['value' => $minStock, 'type' => 'num'],
+                ['value' => $avgCost, 'type' => 'num'],
+                ['value' => $lineValuation, 'type' => 'currency'],
+                ['value' => $statusText, 'type' => $statusType],
+            ];
+        }
+
+        $totals = [
+            ['value' => 'TOTAL VALUASI', 'type' => 'center'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => "{$totalItems} Bahan Baku", 'type' => 'text'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => $totalValuation, 'type' => 'currency'],
+            ['value' => "{$lowStockCount} Perlu Restock", 'type' => 'badge-warn'],
+        ];
+
+        $summary = [
+            'Total Jenis Bahan' => $totalItems . ' Item',
+            'Total Valuasi Nilai Stok' => 'Rp ' . number_format($totalValuation, 0, ',', '.'),
+            'Bahan Perlu Restock' => $lowStockCount . ' Item',
+            'Cabang Gudang' => $outlet->name ?? 'Cabang Utama',
+        ];
+
+        $filename = 'Laporan_Stok_Gudang_' . date('Ymd_His') . '.xls';
+        $title = 'LAPORAN STOK GUDANG & VALUASI BAHAN BAKU - ' . strtoupper($outlet->name ?? 'SOTO LAMONGAN LESTARI');
+        $subtitle = 'Dicetak pada: ' . now()->translatedFormat('d F Y H:i') . ' WIB | Gudang: ' . ($outlet->name ?? 'Cabang Utama');
+
+        return $excelService->download($filename, $title, $subtitle, $summary, $headers, $rows, $totals);
+    }
+
+    /**
+     * Export Laporan Riwayat Transaksi Penjualan ke Format Excel (.xls).
+     */
+    public function exportOrdersExcel(Request $request, ExcelExportService $excelService): StreamedResponse
+    {
+        $tenant = $request->user()?->tenant ?? Tenant::first();
+        $outlet = $tenant?->outlets()->first() ?? Outlet::first();
+
+        $query = Order::where('tenant_id', $tenant->id)
+            ->with(['items.product', 'user', 'payments', 'table'])
+            ->latest();
+
+        if ($status = $request->input('status')) {
+            $query->where('status', $status);
+        }
+        if ($startDate = $request->input('start_date')) {
+            $query->whereDate('created_at', '>=', $startDate);
+        }
+        if ($endDate = $request->input('end_date')) {
+            $query->whereDate('created_at', '<=', $endDate);
+        }
+
+        $orders = $query->get();
+
+        $totalRevenue = (float) $orders->where('status', 'PAID')->sum('final_amount');
+        $totalPaidCount = $orders->where('status', 'PAID')->count();
+        $totalVoidCount = $orders->where('status', 'VOID')->count();
+
+        $headers = [
+            'No',
+            'No. Struk',
+            'Tanggal & Jam',
+            'Kasir',
+            'Meja / Pelanggan',
+            'Tipe Pesanan',
+            'Status',
+            'Jumlah Item',
+            'Daftar Menu Dipesan',
+            'Subtotal (Rp)',
+            'Diskon (Rp)',
+            'Total Bayar (Rp)',
+            'Metode Pembayaran',
+            'Catatan'
+        ];
+
+        $rows = [];
+        foreach ($orders as $i => $order) {
+            $itemsSummary = $order->items->map(function ($it) {
+                return "{$it->quantity}x " . ($it->product->name ?? 'Menu');
+            })->implode(', ');
+
+            $paymentMethod = $order->payments->pluck('payment_method')->unique()->implode(', ');
+            if (empty($paymentMethod)) {
+                $paymentMethod = $order->payment_method ?? 'TUNAI';
+            }
+
+            $isPaid = ($order->status === 'PAID');
+
+            $rows[] = [
+                ['value' => $i + 1, 'type' => 'center'],
+                ['value' => $order->invoice_number, 'type' => 'text'],
+                ['value' => $order->created_at->format('d/m/Y H:i'), 'type' => 'center'],
+                ['value' => $order->user?->name ?? 'Kasir', 'type' => 'text'],
+                ['value' => $order->table ? $order->table->name : ($order->customer_name ?: '-'), 'type' => 'text'],
+                ['value' => $order->order_type ?? 'DINE_IN', 'type' => 'center'],
+                ['value' => $order->status, 'type' => $isPaid ? 'badge-in' : 'badge-out'],
+                ['value' => (int) $order->items->sum('quantity'), 'type' => 'num'],
+                ['value' => $itemsSummary, 'type' => 'text'],
+                ['value' => (float) $order->total_amount, 'type' => 'num'],
+                ['value' => (float) ($order->discount_amount ?? 0), 'type' => 'num'],
+                ['value' => (float) $order->final_amount, 'type' => 'currency'],
+                ['value' => $paymentMethod, 'type' => 'center'],
+                ['value' => $order->notes ?? '-', 'type' => 'text'],
+            ];
+        }
+
+        $totals = [
+            ['value' => 'TOTAL OMZET', 'type' => 'center'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => "Lunas: {$totalPaidCount} | Batal: {$totalVoidCount}", 'type' => 'text'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => (float) $totalRevenue, 'type' => 'currency'],
+            ['value' => '', 'type' => 'text'],
+            ['value' => '', 'type' => 'text'],
+        ];
+
+        $summary = [
+            'Total Transaksi' => $orders->count() . ' Pesanan',
+            'Transaksi Lunas' => $totalPaidCount . ' Transaksi',
+            'Transaksi Batal (Void)' => $totalVoidCount . ' Transaksi',
+            'Total Omzet Penjualan' => 'Rp ' . number_format($totalRevenue, 0, ',', '.'),
+        ];
+
+        $filename = 'Laporan_Penjualan_POS_' . date('Ymd_His') . '.xls';
+        $title = 'LAPORAN TRANSAKSI PENJUALAN KASIR - ' . strtoupper($outlet->name ?? 'SOTO LAMONGAN LESTARI');
+        $subtitle = 'Dicetak pada: ' . now()->translatedFormat('d F Y H:i') . ' WIB';
+
+        return $excelService->download($filename, $title, $subtitle, $summary, $headers, $rows, $totals);
+    }
+
+    /**
+     * Export Laporan Menu & Resep HPP ke Format Excel (.xls).
+     */
+    public function exportProductsExcel(Request $request, ExcelExportService $excelService): StreamedResponse
+    {
+        $tenant = $request->user()?->tenant ?? Tenant::first();
+        $outlet = $tenant?->outlets()->first() ?? Outlet::first();
+
+        $products = Product::where('tenant_id', $tenant->id)
+            ->with(['category', 'recipes.rawMaterial'])
+            ->get();
+
+        $headers = [
+            'No',
+            'Kategori',
+            'SKU / Kode',
+            'Nama Menu',
+            'Harga Jual (Rp)',
+            'HPP Bahan Baku (Rp)',
+            'Margin Keuntungan (Rp)',
+            'Persentase Margin (%)',
+            'Rincian Resep Bahan Baku (BOM)',
+            'Status Menu'
+        ];
+
+        $rows = [];
+        foreach ($products as $i => $p) {
+            $price = (float) $p->selling_price;
+            $hpp = (float) $p->cogs;
+            $marginRp = $price - $hpp;
+            $marginPct = $price > 0 ? ($marginRp / $price) : 0;
+
+            $recipeSummary = $p->recipes->map(function ($r) {
+                return ($r->rawMaterial->name ?? 'Bahan') . ' ' . $r->quantity . ' ' . ($r->rawMaterial->unit ?? 'unit');
+            })->implode(', ');
+
+            if (empty($recipeSummary)) {
+                $recipeSummary = 'Tanpa Resep (Langsung Jual)';
+            }
+
+            $rows[] = [
+                ['value' => $i + 1, 'type' => 'center'],
+                ['value' => $p->category?->name ?? 'Umum', 'type' => 'text'],
+                ['value' => $p->sku ?? '-', 'type' => 'text'],
+                ['value' => $p->name, 'type' => 'text'],
+                ['value' => $price, 'type' => 'currency'],
+                ['value' => $hpp, 'type' => 'num'],
+                ['value' => $marginRp, 'type' => 'currency'],
+                ['value' => round($marginPct * 100, 1) . '%', 'type' => 'center'],
+                ['value' => $recipeSummary, 'type' => 'text'],
+                ['value' => $p->is_active ? 'AKTIF' : 'NONAKTIF', 'type' => $p->is_active ? 'badge-in' : 'badge-out'],
+            ];
+        }
+
+        $summary = [
+            'Total Menu' => $products->count() . ' Menu',
+            'Menu Aktif' => $products->where('is_active', true)->count() . ' Menu',
+            'Harga Jual Rata-rata' => 'Rp ' . number_format($products->avg('selling_price') ?: 0, 0, ',', '.'),
+            'HPP Bahan Rata-rata' => 'Rp ' . number_format($products->avg('cogs') ?: 0, 0, ',', '.'),
+        ];
+
+        $filename = 'Laporan_Menu_Resep_HPP_' . date('Ymd_His') . '.xls';
+        $title = 'KATALOG MENU & HPP RESEP (BOM) - ' . strtoupper($outlet->name ?? 'SOTO LAMONGAN LESTARI');
+        $subtitle = 'Dicetak pada: ' . now()->translatedFormat('d F Y H:i') . ' WIB';
+
+        return $excelService->download($filename, $title, $subtitle, $summary, $headers, $rows);
     }
 }

@@ -358,10 +358,6 @@
                         <span>Subtotal</span>
                         <span class="font-mono tabular-nums font-semibold">Rp<span x-text="Number(subtotal).toLocaleString('id-ID')"></span></span>
                     </div>
-                    <div class="flex justify-between text-xs text-stone-600">
-                        <span>PPN (11%)</span>
-                        <span class="font-mono tabular-nums font-semibold">Rp<span x-text="Number(taxAmount).toLocaleString('id-ID')"></span></span>
-                    </div>
                     
                     <!-- Total Bayar Block -->
                     <div class="p-2.5 rounded-[6px] bg-[#5B0A14] text-white flex justify-between items-center mt-1">
@@ -1208,8 +1204,8 @@
                     <span>Diskon</span>
                     <span x-text="`-${Number(completedOrder?.discount_amount || 0).toLocaleString('id-ID')}`"></span>
                 </div>
-                <div class="flex justify-between">
-                    <span>PPN (11%)</span>
+                <div class="flex justify-between" x-show="Number(completedOrder?.tax_amount || 0) > 0">
+                    <span>Pajak</span>
                     <span x-text="Number(completedOrder?.tax_amount || 0).toLocaleString('id-ID')"></span>
                 </div>
                 <div class="flex justify-between font-bold text-xs pt-1 border-t border-dotted border-black">
