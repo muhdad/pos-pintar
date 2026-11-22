@@ -19,6 +19,10 @@ class Outlet extends Model
         'type',
         'address',
         'phone',
+        'qris_payload',
+        'qris_merchant_name',
+        'qris_city',
+        'qris_image_path',
         'latitude',
         'longitude',
     ];

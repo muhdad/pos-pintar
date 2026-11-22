@@ -976,4 +976,58 @@ class BackofficeController extends Controller
         $count = count($validated['items']);
         return back()->with('status', "Auto Restock berhasil! {$count} bahan baku telah ditambahkan ke stok dan HPP otomatis disesuaikan (Total Belanja: Rp " . number_format($totalPurchase, 0, ',', '.') . ").");
     }
+
+    /**
+     * Halaman Pengaturan Outlet & Pembayaran QRIS (Khusus Superadmin & Owner).
+     */
+    public function settings(Request $request): View
+    {
+        $tenant = $request->user()?->tenant ?? Tenant::first();
+        $outlet = $tenant?->outlets()->first() ?? Outlet::first();
+
+        return view('backoffice.settings.index', compact('tenant', 'outlet'));
+    }
+
+    /**
+     * Simpan Pengaturan Outlet & Pembayaran QRIS Toko.
+     */
+    public function updateSettings(Request $request): RedirectResponse
+    {
+        $tenant = $request->user()?->tenant ?? Tenant::first();
+        $outlet = $tenant?->outlets()->first() ?? Outlet::first();
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:150',
+            'phone' => 'nullable|string|max:30',
+            'address' => 'nullable|string|max:255',
+            'qris_payload' => 'nullable|string',
+            'qris_merchant_name' => 'nullable|string|max:100',
+            'qris_city' => 'nullable|string|max:50',
+            'qris_image' => 'nullable|image|max:5120',
+        ]);
+
+        $updateData = [
+            'name' => $validated['name'],
+            'phone' => $validated['phone'] ?? null,
+            'address' => $validated['address'] ?? null,
+            'qris_payload' => ! empty($validated['qris_payload']) ? trim($validated['qris_payload']) : null,
+            'qris_merchant_name' => $validated['qris_merchant_name'] ?? null,
+            'qris_city' => $validated['qris_city'] ?? null,
+        ];
+
+        if ($request->hasFile('qris_image')) {
+            $file = $request->file('qris_image');
+            $filename = 'qris_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $destination = public_path('uploads/qris');
+            if (! is_dir($destination)) {
+                mkdir($destination, 0755, true);
+            }
+            $file->move($destination, $filename);
+            $updateData['qris_image_path'] = 'uploads/qris/' . $filename;
+        }
+
+        $outlet->update($updateData);
+
+        return back()->with('status', 'Pengaturan outlet dan QRIS toko berhasil disimpan!');
+    }
 }

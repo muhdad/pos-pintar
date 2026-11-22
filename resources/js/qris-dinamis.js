@@ -25,9 +25,12 @@ export function crc16(str) {
 export const DEFAULT_STATIC_QRIS = '00020101021126580014ID.LINKAJA.WWW01189360091100223405100208123456785204581253033605802ID5922SOTO LAMONGAN LESTARI6007JAKARTA6105123456304ABCD';
 
 /**
- * Ambil payload QRIS dasar (dari localStorage jika kasir pernah menyetel, atau default).
+ * Ambil payload QRIS dasar (dari database outlet via POS_CONFIG, atau localStorage jika diset kustom, atau default template).
  */
 export function getBaseQrisPayload() {
+    if (window.POS_CONFIG && window.POS_CONFIG.outletQrisPayload && window.POS_CONFIG.outletQrisPayload.trim() !== '') {
+        return window.POS_CONFIG.outletQrisPayload.trim();
+    }
     return localStorage.getItem('pos_custom_qris_payload') || DEFAULT_STATIC_QRIS;
 }
 

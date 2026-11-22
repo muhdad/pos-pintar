@@ -17,6 +17,9 @@
         window.POS_CONFIG = {
             tenantId: "{{ $tenant->id ?? '' }}",
             outletId: "{{ $outlet->id ?? '' }}",
+            outletQrisPayload: @json($outlet->qris_payload ?? ''),
+            outletQrisMerchantName: @json($outlet->qris_merchant_name ?? $outlet->name ?? 'SOTO LAMONGAN LESTARI'),
+            outletQrisCity: @json($outlet->qris_city ?? 'JAKARTA'),
             userId: "{{ auth()->id() ?? '1' }}",
             shiftId: "{{ $shift->id ?? '' }}",
             activeShift: @json($shift ? ['id' => $shift->id, 'start_cash' => (float)$shift->start_cash, 'start_time' => $shift->start_time] : null)
@@ -711,19 +714,12 @@
                             </div>
                         </div>
 
-                        <!-- Action Bar: Customer Display & Settings -->
+                        <!-- Action Bar: Customer Display -->
                         <div class="flex items-center justify-center gap-2 pt-1">
                             <button type="button" 
                                     @click="openCustomerDisplay()" 
-                                    class="bauhaus-btn-blue text-[10px] py-1 px-2.5">
-                                <span>🖥️ Layar Pelanggan</span>
-                            </button>
-
-                            <button type="button" 
-                                    @click="openQrisSettings()" 
-                                    class="bauhaus-btn-white text-[10px] py-1 px-2 text-stone-600"
-                                    title="Atur String QRIS Statis Toko">
-                                <span>⚙️ Atur QRIS</span>
+                                    class="bauhaus-btn-blue text-[10px] py-1 px-3">
+                                <span>🖥️ Buka Layar Pelanggan</span>
                             </button>
                         </div>
                     </div>
@@ -813,49 +809,6 @@
                             class="w-full h-11 rounded-[6px] bg-[#EA580C] hover:bg-[#D94E07] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs tracking-wider uppercase transition shadow-subtle flex items-center justify-center gap-1.5 active:translate-y-px">
                         <span x-text="isProcessingCheckout ? 'Menyimpan Transaksi...' : 'Selesaikan Pembayaran'"></span>
                     </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- QRIS Settings Modal -->
-        <div x-show="qrisSettingsModalOpen" 
-             class="fixed inset-0 bg-stone-900/60 z-50 flex items-center justify-center p-3 sm:p-4" 
-             x-cloak>
-            <div class="bauhaus-card max-w-md w-full p-5 bg-white shadow-modal animate-in fade-in"
-                 @click.outside="qrisSettingsModalOpen = false">
-                <div class="flex items-center justify-between pb-2.5 border-b-2 border-stone-900 mb-3">
-                    <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 bg-[#1D4ED8] border border-black"></span>
-                        <h3 class="text-sm font-display font-black text-[#121212] uppercase tracking-wide">
-                            Pengaturan QRIS Toko
-                        </h3>
-                    </div>
-                    <button type="button" @click="qrisSettingsModalOpen = false" class="text-stone-900 hover:text-red-600 font-black p-1">✕</button>
-                </div>
-
-                <div class="space-y-3 text-xs">
-                    <p class="text-stone-600 leading-relaxed">
-                        Masukkan string payload QRIS statis dari rekening bank/merchant Anda (misal: BCA, Mandiri, BRI, ShopeePay, Nobu, atau Midtrans). 
-                        Sistem POS otomatis mengubahnya menjadi <strong>QRIS Dinamis</strong> ber-nominal otomatis saat checkout!
-                    </p>
-
-                    <div>
-                        <label class="block font-black text-stone-700 uppercase font-mono text-[10px] mb-1">
-                            String Payload QRIS Statis Toko:
-                        </label>
-                        <textarea x-model="customQrisInput" 
-                                  rows="4" 
-                                  placeholder="000201010211..." 
-                                  class="bauhaus-input w-full font-mono text-[10px]"></textarea>
-                        <span class="text-[9px] text-stone-400 font-mono mt-1 block">
-                            *Kosongkan untuk menggunakan template resmi default Soto Lamongan Lestari.
-                        </span>
-                    </div>
-
-                    <div class="pt-2 flex justify-end gap-2 border-t-2 border-stone-200">
-                        <button type="button" @click="qrisSettingsModalOpen = false" class="bauhaus-btn-white">Batal</button>
-                        <button type="button" @click="saveQrisSettings()" class="bauhaus-btn-blue font-bold">Simpan Pengaturan</button>
-                    </div>
                 </div>
             </div>
         </div>

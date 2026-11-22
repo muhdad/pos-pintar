@@ -74,6 +74,12 @@ Route::middleware(['auth', 'verified', 'role:SUPERADMIN,OWNER,MANAGER,FINANCE'])
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
         Route::post('/users/{user}/toggle', [UserController::class, 'toggleStatus'])->name('users.toggle');
+
+        // Pengaturan Outlet & QRIS Toko (Superadmin / Owner)
+        Route::middleware(['role:SUPERADMIN,OWNER'])->group(function () {
+            Route::get('/settings', [BackofficeController::class, 'settings'])->name('settings.index');
+            Route::post('/settings', [BackofficeController::class, 'updateSettings'])->name('settings.update');
+        });
     });
 });
 
