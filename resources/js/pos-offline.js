@@ -82,12 +82,11 @@ export function posTerminal() {
         multiNonCashAmount: 0,
         multiNonCashMethod: 'QRIS',
 
-        // QRIS Dinamis Otomatis Nominal
+        // QRIS Dinamis Otomatis Nominal (Mode Tablet Tunggal & Customer Display)
         qrisTimerSeconds: 300,
         qrisTimerInterval: null,
         currentDynamicQrisString: '',
-        qrisSettingsModalOpen: false,
-        customQrisInput: '',
+        qrisFullScreenModalOpen: false,
 
         // Shift Kasir
         activeShift: null,
@@ -487,15 +486,19 @@ export function posTerminal() {
                 }
             }, 1000);
 
-            // Render ke canvas QRIS di layar POS
+            // Render ke canvas QRIS di layar tablet kasir
             this.$nextTick(() => {
                 const canvas = document.getElementById('qris-pos-canvas');
                 if (canvas && this.currentDynamicQrisString && window.QRIS_HELPER) {
-                    window.QRIS_HELPER.renderQrisCanvas(canvas, this.currentDynamicQrisString);
+                    window.QRIS_HELPER.renderQrisCanvas(canvas, this.currentDynamicQrisString, 240);
+                }
+                const fullCanvas = document.getElementById('qris-fullscreen-canvas');
+                if (fullCanvas && this.currentDynamicQrisString && window.QRIS_HELPER) {
+                    window.QRIS_HELPER.renderQrisCanvas(fullCanvas, this.currentDynamicQrisString, 300);
                 }
             });
 
-            // Kirim sync ke Layar Pelanggan (Customer Display)
+            // Kirim sync ke Layar Pelanggan jika ada yang connect
             window.QRIS_HELPER?.broadcastToCustomerDisplay({
                 type: 'SHOW_QRIS',
                 amount: amount,
@@ -513,21 +516,19 @@ export function posTerminal() {
             return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         },
 
+        // Mode Perbesar QRIS khusus Tablet Tunggal (Sodorkan ke Pelanggan)
+        openQrisFullScreen() {
+            this.qrisFullScreenModalOpen = true;
+            this.$nextTick(() => {
+                const fullCanvas = document.getElementById('qris-fullscreen-canvas');
+                if (fullCanvas && this.currentDynamicQrisString && window.QRIS_HELPER) {
+                    window.QRIS_HELPER.renderQrisCanvas(fullCanvas, this.currentDynamicQrisString, 300);
+                }
+            });
+        },
+
         openCustomerDisplay() {
             window.open('/pos/customer-display', 'CustomerDisplay', 'width=960,height=720,menubar=no,toolbar=no,location=no,status=no');
-        },
-
-        openQrisSettings() {
-            this.customQrisInput = window.QRIS_HELPER?.getBaseQrisPayload() || '';
-            this.qrisSettingsModalOpen = true;
-        },
-
-        saveQrisSettings() {
-            if (this.customQrisInput) {
-                window.QRIS_HELPER?.setCustomQrisPayload(this.customQrisInput);
-            }
-            this.qrisSettingsModalOpen = false;
-            this.generateQris();
         },
 
         // ----------------------------------------------------
@@ -825,6 +826,7 @@ export function posTerminal() {
                 this.selectedTableId = '';
                 this.selectedTableName = '';
                 this.paymentModalOpen = false;
+                this.qrisFullScreenModalOpen = false;
                 this.mobileCartOpen = false;
                 this.successModalOpen = true;
 

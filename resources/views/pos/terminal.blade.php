@@ -692,12 +692,14 @@
 
                         <!-- Merchant & Amount Info -->
                         <div>
-                            <span class="text-[10px] font-black uppercase tracking-wider text-stone-600 font-mono block">SOTO LAMONGAN LESTARI</span>
+                            <span class="text-[10px] font-black uppercase tracking-wider text-stone-600 font-mono block">
+                                {{ $outlet->qris_merchant_name ?? $outlet->name ?? 'SOTO LAMONGAN LESTARI' }}
+                            </span>
                             <div class="text-2xl sm:text-3xl font-display font-black text-[#121212] font-mono tracking-tight my-1">
                                 Rp<span x-text="Number(finalTotal).toLocaleString('id-ID')"></span>
                             </div>
                             <span class="text-[9px] text-stone-600 font-mono block">
-                                Nominal tagihan telah otomatis terisi. Pelanggan cukup scan & masukkan PIN tanpa perlu ketik nominal!
+                                Nominal tagihan telah otomatis terisi. Pembeli tinggal scan dari layar tablet ini!
                             </span>
                         </div>
 
@@ -714,12 +716,12 @@
                             </div>
                         </div>
 
-                        <!-- Action Bar: Customer Display -->
+                        <!-- Action Bar Khusus Tablet Kasir: Sodorkan Layar Penuh -->
                         <div class="flex items-center justify-center gap-2 pt-1">
                             <button type="button" 
-                                    @click="openCustomerDisplay()" 
-                                    class="bauhaus-btn-blue text-[10px] py-1 px-3">
-                                <span>🖥️ Buka Layar Pelanggan</span>
+                                    @click="openQrisFullScreen()" 
+                                    class="px-3.5 py-1.5 bg-[#FACC15] hover:bg-yellow-400 text-[#121212] font-display font-black text-xs uppercase border-2 border-[#121212] shadow-[2px_2px_0px_#121212] active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center gap-1.5">
+                                <span>📱 Perbesar Layar (Sodorkan Tablet ke Pembeli)</span>
                             </button>
                         </div>
                     </div>
@@ -806,8 +808,73 @@
                     <button type="button"
                             @click="processCheckout()"
                             :disabled="isProcessingCheckout || (selectedPaymentMethod === 'CASH' && cashGiven < finalTotal) || (selectedPaymentMethod === 'MULTI' && totalMultiPaid < finalTotal)"
-                            class="w-full h-11 rounded-[6px] bg-[#EA580C] hover:bg-[#D94E07] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs tracking-wider uppercase transition shadow-subtle flex items-center justify-center gap-1.5 active:translate-y-px">
-                        <span x-text="isProcessingCheckout ? 'Menyimpan Transaksi...' : 'Selesaikan Pembayaran'"></span>
+                            class="w-full h-11 rounded-[6px] disabled:opacity-40 disabled:cursor-not-allowed text-white font-display font-bold text-xs tracking-wider uppercase transition shadow-subtle flex items-center justify-center gap-1.5 active:translate-y-px"
+                            :class="selectedPaymentMethod === 'QRIS' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-[#EA580C] hover:bg-[#D94E07]'">
+                        <span x-text="isProcessingCheckout ? 'Menyimpan Transaksi...' : (selectedPaymentMethod === 'QRIS' ? '✓ Selesaikan Pembayaran QRIS (Lunas)' : 'Selesaikan Pembayaran')"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fullscreen QRIS Modal khusus Tablet Kasir (Sodorkan ke Pembeli) -->
+        <div x-show="qrisFullScreenModalOpen" 
+             class="fixed inset-0 bg-[#121212]/90 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in"
+             x-cloak>
+            <div class="bg-white border-4 border-[#121212] shadow-[8px_8px_0px_#FACC15] max-w-sm sm:max-w-md w-full p-5 sm:p-6 text-center space-y-4 my-auto"
+                 @click.outside="qrisFullScreenModalOpen = false">
+                
+                <!-- Top Banner QRIS -->
+                <div class="flex items-center justify-between border-b-2 border-[#121212] pb-2.5">
+                    <div class="flex items-center gap-2">
+                        <span class="bg-[#DC2626] text-white px-2 py-0.5 text-xs font-black tracking-widest font-mono">QRIS</span>
+                        <span class="bg-[#1D4ED8] text-white px-1.5 py-0.5 text-[10px] font-black font-mono">GPN</span>
+                    </div>
+                    <button type="button" 
+                            @click="qrisFullScreenModalOpen = false" 
+                            class="text-stone-700 hover:text-red-600 font-black text-sm p-1">
+                        ✕ Tutup (ESC)
+                    </button>
+                </div>
+
+                <!-- Outlet Name & Big Amount -->
+                <div>
+                    <span class="text-xs font-black uppercase tracking-wider text-stone-600 font-mono block">
+                        {{ $outlet->qris_merchant_name ?? $outlet->name ?? 'SOTO LAMONGAN LESTARI' }}
+                    </span>
+                    <div class="text-3xl sm:text-4xl font-display font-black text-[#121212] font-mono tracking-tight my-1">
+                        Rp<span x-text="Number(finalTotal).toLocaleString('id-ID')"></span>
+                    </div>
+                    <span class="inline-block bg-emerald-100 text-emerald-800 border border-emerald-500 font-mono text-[10px] font-bold px-2 py-0.5">
+                        🟢 NOMINAL OTOMATIS TERKUNCI
+                    </span>
+                </div>
+
+                <!-- Big Canvas QRIS -->
+                <div class="p-3 bg-white border-2 border-[#121212] shadow-[4px_4px_0px_#121212] inline-block mx-auto">
+                    <canvas id="qris-fullscreen-canvas" class="mx-auto block"></canvas>
+                </div>
+
+                <p class="text-xs font-mono text-stone-600 leading-snug">
+                    Silakan scan menggunakan <strong>BCA, Livin Mandiri, BRImo, GoPay, ShopeePay, Dana, atau OVO</strong>.<br>
+                    Nominal tagihan sudah terkunci otomatis.
+                </p>
+
+                <!-- Bottom Action -->
+                <div class="pt-2 flex flex-col gap-2">
+                    <button type="button" 
+                            @click="qrisFullScreenModalOpen = false; processCheckout();"
+                            :disabled="isProcessingCheckout"
+                            class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-display font-black text-sm uppercase tracking-wider border-2 border-[#121212] shadow-[4px_4px_0px_#121212] active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span x-text="isProcessingCheckout ? 'Menyimpan...' : 'Pelanggan Sudah Bayar (Lunas)'"></span>
+                    </button>
+
+                    <button type="button" 
+                            @click="qrisFullScreenModalOpen = false"
+                            class="w-full py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-mono text-xs font-bold border border-stone-300">
+                        Kembali ke Kasir
                     </button>
                 </div>
             </div>

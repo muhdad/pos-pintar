@@ -90,12 +90,12 @@ export function convertToDynamicQris(staticQris, amount) {
 /**
  * Render QR Code ke elemen HTML Canvas.
  */
-export async function renderQrisCanvas(canvasElement, rawQrisPayload) {
+export async function renderQrisCanvas(canvasElement, rawQrisPayload, customWidth = 240) {
     if (!canvasElement) return;
 
     try {
         await QRCode.toCanvas(canvasElement, rawQrisPayload, {
-            width: 240,
+            width: customWidth,
             margin: 2,
             color: {
                 dark: '#121212',
