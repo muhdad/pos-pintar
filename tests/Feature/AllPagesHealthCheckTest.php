@@ -1,0 +1,219 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Outlet;
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class AllPagesHealthCheckTest extends TestCase
+{
+    use RefreshDatabase;
+    protected ?User $adminUser = null;
+    protected ?Tenant $tenant = null;
+    protected ?Outlet $outlet = null;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->adminUser = User::first() ?? User::factory()->create([
+            'role' => 'SUPERADMIN',
+            'is_active' => true,
+        ]);
+
+        $this->tenant = Tenant::first() ?? Tenant::create([
+            'name' => 'Soto Lamongan Lestari',
+            'slug' => 'sll-test',
+            'owner_phone' => '08123456789',
+        ]);
+
+        $this->outlet = Outlet::first() ?? Outlet::create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'SLL Cabang Utama',
+            'address' => 'Jl. Lamongan No. 1',
+        ]);
+    }
+
+    public function test_welcome_page_redirects_to_login_when_unauthenticated()
+    {
+        $response = $this->get('/');
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_welcome_page_redirects_to_dashboard_when_authenticated()
+    {
+        $response = $this->actingAs($this->adminUser)->get('/');
+        $response->assertRedirect(route('dashboard'));
+    }
+
+    public function test_login_page_loads_successfully()
+    {
+        $response = $this->get('/login');
+        $response->assertStatus(200);
+    }
+
+    public function test_dashboard_loads_successfully()
+    {
+        $response = $this->actingAs($this->adminUser)->get('/dashboard');
+        $response->assertStatus(200);
+    }
+
+    public function test_pos_terminal_loads_successfully()
+    {
+        $response = $this->actingAs($this->adminUser)->get('/pos');
+        $response->assertStatus(200);
+    }
+
+    public function test_customer_display_loads_successfully()
+    {
+        $response = $this->actingAs($this->adminUser)->get('/pos/customer-display');
+        $response->assertStatus(200);
+    }
+
+    public function test_products_page_loads_successfully()
+    {
+        $response = $this->actingAs($this->adminUser)->get('/backoffice/products');
+        $response->assertStatus(200);
+    }
+
+    public function test_inventory_page_loads_successfully()
+    {
+        $response = $this->actingAs($this->adminUser)->get('/backoffice/inventory');
+        $response->assertStatus(200);
+    }
+
+    public function test_orders_page_loads_successfully()
+    {
+        $response = $this->actingAs($this->adminUser)->get('/backoffice/orders');
+        $response->assertStatus(200);
+    }
+
+    public function test_cashflow_page_loads_successfully()
+    {
+        $response = $this->actingAs($this->adminUser)->get('/backoffice/cashflow');
+        $response->assertStatus(200);
+    }
+
+    public function test_ai_consultant_page_loads_successfully()
+    {
+        $response = $this->actingAs($this->adminUser)->get('/backoffice/ai-consultant');
+        $response->assertStatus(200);
+    }
+
+    public function test_users_management_page_loads_successfully()
+    {
+        $response = $this->actingAs($this->adminUser)->get('/backoffice/users');
+        $response->assertStatus(200);
+    }
+
+    public function test_settings_page_loads_successfully()
+    {
+        $response = $this->actingAs($this->adminUser)->get('/backoffice/settings');
+        $response->assertStatus(200);
+    }
+
+    public function test_cashflow_excel_export_streams_successfully()
+    {
+        $response = $this->actingAs($this->adminUser)->get('/backoffice/cashflow/export-excel');
+        $response->assertStatus(200);
+        $response->assertHeader('content-type', 'application/vnd.ms-excel; charset=UTF-8');
+    }
+
+    public function test_inventory_excel_export_streams_successfully()
+    {
+        $response = $this->actingAs($this->adminUser)->get('/backoffice/inventory/export-excel');
+        $response->assertStatus(200);
+        $response->assertHeader('content-type', 'application/vnd.ms-excel; charset=UTF-8');
+    }
+
+    public function test_orders_excel_export_streams_successfully()
+    {
+        $response = $this->actingAs($this->adminUser)->get('/backoffice/orders/export-excel');
+        $response->assertStatus(200);
+        $response->assertHeader('content-type', 'application/vnd.ms-excel; charset=UTF-8');
+    }
+
+    public function test_products_excel_export_streams_successfully()
+    {
+        $response = $this->actingAs($this->adminUser)->get('/backoffice/products/export-excel');
+        $response->assertStatus(200);
+        $response->assertHeader('content-type', 'application/vnd.ms-excel; charset=UTF-8');
+    }
+
+    public function test_orders_csv_export_streams_successfully()
+    {
+        $response = $this->actingAs($this->adminUser)->get('/backoffice/orders/export-csv');
+        $response->assertStatus(200);
+    }
+
+    public function test_catalog_json_export_streams_successfully()
+    {
+        $response = $this->actingAs($this->adminUser)->get('/backoffice/catalog/export');
+        $response->assertStatus(200);
+        $response->assertHeader('content-type', 'application/json');
+    }
+
+    public function test_can_update_outlet_and_qris_settings()
+    {
+        $response = $this->actingAs($this->adminUser)->post('/backoffice/settings', [
+            'name' => 'SLL Cabang Baru',
+            'phone' => '081299998888',
+            'address' => 'Jl. Baru No. 88',
+            'qris_payload' => '000201010211...',
+            'qris_merchant_name' => 'SOTO LAMONGAN LESTARI',
+            'qris_city' => 'JAKARTA',
+        ]);
+
+        $response->assertSessionHas('status');
+        $this->assertDatabaseHas('outlets', [
+            'id' => $this->outlet->id,
+            'name' => 'SLL Cabang Baru',
+        ]);
+    }
+
+    public function test_can_record_and_delete_cashflow_expense()
+    {
+        $response = $this->actingAs($this->adminUser)->post('/backoffice/cashflow/expense', [
+            'category' => 'OPERATIONAL',
+            'amount' => 50000,
+            'description' => 'Beli sabun cuci piring',
+            'source_account' => 'CASH_DRAWER',
+            'transaction_date' => now()->toDateString(),
+            'is_h_minus_one_deduction' => true,
+        ]);
+
+        $response->assertSessionHas('status');
+        $this->assertDatabaseHas('cashflows', [
+            'description' => 'Beli sabun cuci piring',
+            'amount' => 50000,
+        ]);
+    }
+
+    public function test_can_store_category()
+    {
+        $response = $this->actingAs($this->adminUser)->post('/backoffice/categories', [
+            'name' => 'Kategori Uji Coba',
+            'icon' => 'bowl',
+        ]);
+
+        $response->assertSessionHas('status');
+        $this->assertDatabaseHas('categories', [
+            'name' => 'Kategori Uji Coba',
+        ]);
+    }
+
+    public function test_pos_verify_pin_endpoint()
+    {
+        $this->adminUser->update(['pin_hash' => \Illuminate\Support\Facades\Hash::make('1234')]);
+
+        $response = $this->postJson('/api/pos/verify-pin', [
+            'pin' => '1234',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['success' => true]);
+    }
+}

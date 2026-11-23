@@ -10,6 +10,7 @@ use App\Models\OutletStock;
 use App\Models\Product;
 use App\Models\Shift;
 use App\Models\Table;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Pos\OrderService;
 use App\Services\Pos\ShiftService;

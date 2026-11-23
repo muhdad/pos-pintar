@@ -742,12 +742,15 @@ export function posTerminal() {
                 created_at: now,
             };
 
+            // Clone murni plain JSON untuk mencegah error "Proxy object could not be cloned" di IndexedDB & BroadcastChannel
+            const cleanOrderPayload = JSON.parse(JSON.stringify(orderPayload));
+
             try {
                 // 1. Simpan ke IndexedDB lokal (Offline-First)
-                await posDb.orders.put(orderPayload);
+                await posDb.orders.put(cleanOrderPayload);
                 await posDb.sync_queue.add({
                     entity_type: 'ORDER',
-                    payload: orderPayload,
+                    payload: cleanOrderPayload,
                     created_at: Date.now(),
                     retry_count: 0
                 });
@@ -776,7 +779,7 @@ export function posTerminal() {
                             const localStock = await posDb.stocks.get(recipe.raw_material_id);
                             if (localStock) {
                                 localStock.current_stock -= (item.quantity * parseFloat(recipe.quantity));
-                                await posDb.stocks.put(localStock);
+                                await posDb.stocks.put(JSON.parse(JSON.stringify(localStock)));
                             }
                         }
                     }
@@ -788,17 +791,17 @@ export function posTerminal() {
                 }
 
                 // Bebaskan meja jika dine in
-                if (orderPayload.table_id) {
-                    const tbl = this.tables.find(t => t.id === orderPayload.table_id);
+                if (cleanOrderPayload.table_id) {
+                    const tbl = this.tables.find(t => t.id === cleanOrderPayload.table_id);
                     if (tbl) tbl.is_occupied = false;
                 }
 
                 // 5. Tampilkan Modal Sukses Transaksi
-                this.completedOrder = {
-                    ...orderPayload,
+                this.completedOrder = JSON.parse(JSON.stringify({
+                    ...cleanOrderPayload,
                     changeDue: this.changeDue,
                     cashGiven: this.selectedPaymentMethod === 'CASH' ? this.cashGiven : this.totalMultiPaid
-                };
+                }));
 
                 // Otomatis cetak struk via bluetooth jika printer siap
                 if (window.thermalPrinter?.isConnected) {
@@ -806,11 +809,15 @@ export function posTerminal() {
                 }
 
                 // Broadcast ke Customer Display bahwa pembayaran sukses
-                window.QRIS_HELPER?.broadcastToCustomerDisplay({
-                    type: 'PAYMENT_SUCCESS',
-                    order: this.completedOrder,
-                    changeDue: this.changeDue
-                });
+                try {
+                    window.QRIS_HELPER?.broadcastToCustomerDisplay({
+                        type: 'PAYMENT_SUCCESS',
+                        order: this.completedOrder,
+                        changeDue: this.changeDue
+                    });
+                } catch (e) {
+                    console.warn('Gagal broadcast payment success:', e);
+                }
 
                 if (this.qrisTimerInterval) clearInterval(this.qrisTimerInterval);
 

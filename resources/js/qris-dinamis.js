@@ -119,16 +119,18 @@ try {
 }
 
 export function broadcastToCustomerDisplay(payload) {
-    if (customerChannel) {
-        customerChannel.postMessage(payload);
-    }
-    // Fallback via localStorage event untuk browser lawas
     try {
+        const cleanPayload = JSON.parse(JSON.stringify(payload));
+        if (customerChannel) {
+            customerChannel.postMessage(cleanPayload);
+        }
         localStorage.setItem('sll_pos_customer_display_event', JSON.stringify({
-            ...payload,
+            ...cleanPayload,
             _timestamp: Date.now()
         }));
-    } catch (e) {}
+    } catch (e) {
+        console.warn('Customer display broadcast error:', e);
+    }
 }
 
 window.QRIS_HELPER = {
