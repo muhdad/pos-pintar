@@ -117,17 +117,17 @@
     }" class="space-y-5">
 
         <!-- Page Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-[#E7E0D8]">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200/80">
             <div>
-                <h1 class="text-lg sm:text-xl font-display font-bold text-[#5B0A14] tracking-tight">Manajemen Bahan Baku & Gudang</h1>
-                <p class="text-xs text-stone-500 mt-0.5">Monitoring kuantitas bahan baku riil, restock nota faktur, dan audit mutasi stok resep.</p>
+                <h1 class="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">Manajemen Bahan Baku & Gudang</h1>
+                <p class="text-xs text-slate-500 mt-0.5">Monitoring kuantitas bahan baku riil, restock nota faktur, dan audit mutasi stok resep.</p>
             </div>
             <div class="flex items-center gap-2">
                 <!-- Export JSON Button -->
                 <a href="{{ route('backoffice.catalog.export') }}" 
-                   class="px-2.5 py-1.5 rounded-[6px] bg-white border border-[#E7E0D8] text-stone-700 hover:bg-stone-50 font-semibold text-xs transition flex items-center gap-1.5"
+                   class="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition flex items-center gap-1.5 shadow-xs"
                    title="Download file backup bahan baku & stok gudang (JSON)">
-                    <svg class="w-3.5 h-3.5 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
                     <span>Export</span>
@@ -136,27 +136,27 @@
                 <!-- Import JSON Button -->
                 <button type="button" 
                         @click="importModalOpen = true"
-                        class="px-2.5 py-1.5 rounded-[6px] bg-white border border-[#E7E0D8] text-stone-700 hover:bg-stone-50 font-semibold text-xs transition flex items-center gap-1.5"
+                        class="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition flex items-center gap-1.5 shadow-xs"
                         title="Upload file data bahan baku & stok gudang (JSON)">
-                    <svg class="w-3.5 h-3.5 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
                     <span>Import</span>
                 </button>
 
-                <!-- Auto Restock Struk AI Button (Bauhaus Accent) -->
+                <!-- Auto Restock Struk AI Button (Soft Amber) -->
                 <button type="button" 
                         @click="ocrModalOpen = true"
-                        class="bauhaus-btn-yellow">
+                        class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs shadow-xs transition flex items-center gap-1.5">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                     </svg>
                     <span>📸 Auto Restock Struk AI</span>
                 </button>
 
                 <button type="button" 
                         @click="opnameModalOpen = true"
-                        class="px-3 py-1.5 rounded-[4px] bg-white border-2 border-[#121212] text-amber-900 hover:bg-amber-50 font-bold text-xs transition flex items-center gap-1.5 shadow-[2px_2px_0px_#121212]">
+                        class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-amber-900 hover:bg-amber-50/70 font-semibold text-xs transition flex items-center gap-1.5 shadow-xs">
                     <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                     </svg>

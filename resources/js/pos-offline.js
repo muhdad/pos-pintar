@@ -150,11 +150,11 @@ export function posTerminal() {
                 try {
                     await posDb.products.clear();
                     if (this.products.length > 0) {
-                        await posDb.products.bulkPut(this.products);
+                        await posDb.products.bulkPut(JSON.parse(JSON.stringify(this.products)));
                     }
                     if (this.categories.length > 0) {
                         await posDb.categories.clear();
-                        await posDb.categories.bulkPut(this.categories);
+                        await posDb.categories.bulkPut(JSON.parse(JSON.stringify(this.categories)));
                     }
                 } catch (e) {
                     console.warn('Gagal sinkronisasi cache ke IndexedDB:', e);
@@ -196,19 +196,19 @@ export function posTerminal() {
                     
                     if (data.categories?.length > 0) {
                         await posDb.categories.clear();
-                        await posDb.categories.bulkPut(data.categories);
+                        await posDb.categories.bulkPut(JSON.parse(JSON.stringify(data.categories)));
                         this.categories = data.categories;
                     }
 
                     if (data.products?.length > 0) {
                         await posDb.products.clear();
-                        await posDb.products.bulkPut(data.products);
+                        await posDb.products.bulkPut(JSON.parse(JSON.stringify(data.products)));
                         this.products = data.products;
                     }
 
                     if (data.stocks?.length > 0) {
                         await posDb.stocks.clear();
-                        await posDb.stocks.bulkPut(data.stocks);
+                        await posDb.stocks.bulkPut(JSON.parse(JSON.stringify(data.stocks)));
                         this.stocks = data.stocks;
                     }
 
@@ -1026,7 +1026,7 @@ export function posTerminal() {
                                 const localOrder = await posDb.orders.get(id);
                                 if (localOrder) {
                                     localOrder.sync_status = 'SYNCED';
-                                    await posDb.orders.put(localOrder);
+                                    await posDb.orders.put(JSON.parse(JSON.stringify(localOrder)));
                                 }
                             }
 

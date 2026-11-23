@@ -10,28 +10,28 @@
         }
     }" class="space-y-5">
         <!-- Page Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-[#E7E0D8]">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200/80">
             <div>
-                <h1 class="text-lg sm:text-xl font-display font-bold text-[#5B0A14] tracking-tight">Riwayat Transaksi & Struk</h1>
-                <p class="text-xs text-stone-500 mt-0.5">Daftar rekonsiliasi seluruh transaksi kasir online dan offline yang telah tersinkronisasi.</p>
+                <h1 class="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">Riwayat Transaksi & Struk</h1>
+                <p class="text-xs text-slate-500 mt-0.5">Daftar rekonsiliasi seluruh transaksi kasir online dan offline yang telah tersinkronisasi.</p>
             </div>
             <div class="flex items-center gap-2">
                 <!-- Export Excel Button -->
                 <a href="{{ route('backoffice.orders.export-excel', request()->query()) }}" 
-                   class="px-3 py-1.5 rounded-[4px] bg-[#FACC15] hover:bg-yellow-400 text-[#121212] font-black text-xs transition flex items-center gap-1.5 border-2 border-[#121212] shadow-[2px_2px_0px_#121212] active:translate-x-0.5 active:translate-y-0.5">
-                    <svg class="w-3.5 h-3.5 text-[#121212]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   class="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-semibold text-xs transition flex items-center gap-1.5 shadow-xs">
+                    <svg class="w-3.5 h-3.5 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <span>📥 Export Excel (.xls)</span>
+                    <span>Export Excel (.xls)</span>
                 </a>
 
                 <!-- Export CSV Button -->
                 <a href="{{ route('backoffice.orders.export-csv', request()->query()) }}" 
-                   class="px-3 py-1.5 rounded-[4px] bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs transition flex items-center gap-1.5 border border-stone-300">
+                   class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition">
                     <span>CSV</span>
                 </a>
 
-                <a href="{{ route('pos.index') }}" class="px-3.5 py-1.5 rounded-[4px] bg-[#EA580C] hover:bg-[#D94E07] text-white font-bold text-xs tracking-wide transition border-2 border-[#121212] shadow-[2px_2px_0px_#121212] flex items-center gap-1.5 active:translate-x-0.5 active:translate-y-0.5">
+                <a href="{{ route('pos.index') }}" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition flex items-center gap-1.5 active:translate-y-px">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
@@ -41,11 +41,11 @@
         </div>
 
         <!-- Orders Table Card -->
-        <div class="bg-white rounded-[10px] border border-[#E7E0D8] overflow-hidden">
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full min-w-[720px] text-left text-xs">
                     <thead>
-                        <tr class="text-stone-500 font-bold border-b border-[#E7E0D8] bg-stone-50 uppercase text-[10px] tracking-wider sticky top-0 z-10">
+                        <tr class="text-slate-500 font-semibold border-b border-slate-200/80 bg-slate-50/70 text-[11px] sticky top-0 z-10">
                             <th class="py-2.5 px-4">No. Struk</th>
                             <th class="py-2.5 px-3">Waktu</th>
                             <th class="py-2.5 px-3">Kasir</th>
@@ -135,62 +135,62 @@
 
         <!-- Detail Struk Modal -->
         <div x-show="detailModalOpen" 
-             class="fixed inset-0 bg-stone-900/50 z-50 flex items-center justify-center p-4" 
+             class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs" 
              x-cloak>
-            <div class="bg-white rounded-[10px] max-w-sm w-full p-5 border border-[#E7E0D8] shadow-modal animate-in fade-in duration-150"
+            <div class="bg-white rounded-2xl max-w-sm w-full p-6 border border-slate-200 shadow-xl animate-in fade-in duration-150"
                  @click.outside="detailModalOpen = false">
                 
-                <div class="flex items-center justify-between pb-2.5 border-b border-stone-100">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                     <div>
-                        <h3 class="text-xs font-display font-bold text-stone-900 uppercase tracking-wide">Rincian Struk Transaksi</h3>
-                        <span class="text-[10px] text-stone-500 font-mono font-bold" x-text="selectedOrder?.order_number"></span>
+                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wide">Rincian Struk Transaksi</h3>
+                        <span class="text-[10px] text-slate-500 font-mono font-semibold" x-text="selectedOrder?.order_number"></span>
                     </div>
-                    <button type="button" @click="detailModalOpen = false" class="text-stone-400 hover:text-stone-700 font-bold p-1">✕</button>
+                    <button type="button" @click="detailModalOpen = false" class="text-slate-400 hover:text-slate-700 font-bold p-1">✕</button>
                 </div>
 
-                <div class="mt-3 space-y-2.5 text-xs">
-                    <div class="p-2.5 rounded-[6px] bg-stone-50 border border-stone-200 space-y-1">
-                        <div class="flex justify-between text-stone-500">
+                <div class="mt-3.5 space-y-2.5 text-xs">
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                        <div class="flex justify-between text-slate-500">
                             <span>Status:</span>
                             <span class="font-bold text-emerald-700">Lunas</span>
                         </div>
-                        <div class="flex justify-between text-stone-500">
+                        <div class="flex justify-between text-slate-500">
                             <span>Kasir:</span>
-                            <span class="font-medium text-stone-800" x-text="selectedOrder?.user?.name || 'Kasir SLL'"></span>
+                            <span class="font-medium text-slate-800" x-text="selectedOrder?.user?.name || 'Kasir SLL'"></span>
                         </div>
-                        <div class="flex justify-between text-stone-500">
+                        <div class="flex justify-between text-slate-500">
                             <span>Pelanggan:</span>
-                            <span class="font-medium text-stone-800" x-text="selectedOrder?.customer_name || 'Umum / Dine-in'"></span>
+                            <span class="font-medium text-slate-800" x-text="selectedOrder?.customer_name || 'Umum / Dine-in'"></span>
                         </div>
                     </div>
 
                     <!-- Items List -->
-                    <div class="space-y-1.5 border-t border-b border-stone-100 py-2.5">
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-stone-400 block">Daftar Item:</span>
+                    <div class="space-y-1.5 border-t border-b border-slate-100 py-2.5">
+                        <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">Daftar Item:</span>
                         <template x-for="item in (selectedOrder?.items || [])" :key="item.id">
                             <div class="flex justify-between items-start text-xs">
                                 <div>
-                                    <span class="font-bold text-stone-900" x-text="item.quantity + 'x ' + (item.product?.name || 'Menu')"></span>
-                                    <span class="text-[10px] text-stone-400 font-mono tabular-nums block" x-text="'@Rp' + Number(item.unit_price).toLocaleString('id-ID')"></span>
+                                    <span class="font-bold text-slate-800" x-text="item.quantity + 'x ' + (item.product?.name || 'Menu')"></span>
+                                    <span class="text-[10px] text-slate-400 font-mono tabular-nums block" x-text="'@Rp' + Number(item.unit_price).toLocaleString('id-ID')"></span>
                                 </div>
-                                <span class="font-bold text-stone-900 font-mono tabular-nums" x-text="'Rp' + Number(item.subtotal).toLocaleString('id-ID')"></span>
+                                <span class="font-bold text-slate-800 font-mono tabular-nums" x-text="'Rp' + Number(item.subtotal).toLocaleString('id-ID')"></span>
                             </div>
                         </template>
                     </div>
 
                     <!-- Total Breakdown -->
                     <div class="space-y-1 pt-0.5">
-                        <div class="flex justify-between text-stone-500">
+                        <div class="flex justify-between text-slate-500">
                             <span>Subtotal:</span>
-                            <span class="font-mono tabular-nums text-stone-800" x-text="'Rp' + Number(selectedOrder?.total_amount || 0).toLocaleString('id-ID')"></span>
+                            <span class="font-mono tabular-nums text-slate-800" x-text="'Rp' + Number(selectedOrder?.total_amount || 0).toLocaleString('id-ID')"></span>
                         </div>
-                        <div class="flex justify-between text-stone-500" x-show="Number(selectedOrder?.tax_amount || 0) > 0">
+                        <div class="flex justify-between text-slate-500" x-show="Number(selectedOrder?.tax_amount || 0) > 0">
                             <span>Pajak:</span>
-                            <span class="font-mono tabular-nums text-stone-800" x-text="'Rp' + Number(selectedOrder?.tax_amount || 0).toLocaleString('id-ID')"></span>
+                            <span class="font-mono tabular-nums text-slate-800" x-text="'Rp' + Number(selectedOrder?.tax_amount || 0).toLocaleString('id-ID')"></span>
                         </div>
-                        <div class="flex justify-between text-xs font-bold text-stone-900 pt-1.5 border-t border-stone-200">
+                        <div class="flex justify-between text-xs font-bold text-slate-900 pt-1.5 border-t border-slate-200">
                             <span>Total Bayar:</span>
-                            <span class="text-[#5B0A14] font-mono tabular-nums font-bold" x-text="'Rp' + Number(selectedOrder?.final_amount || 0).toLocaleString('id-ID')"></span>
+                            <span class="text-emerald-700 font-mono tabular-nums font-bold" x-text="'Rp' + Number(selectedOrder?.final_amount || 0).toLocaleString('id-ID')"></span>
                         </div>
                     </div>
                 </div>

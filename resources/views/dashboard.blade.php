@@ -14,12 +14,12 @@
 
     <div class="space-y-6">
         <!-- 1. Standard Page Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-[#E7E0D8]">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-200/80">
             <div>
-                <h1 class="text-lg sm:text-xl font-display font-bold text-[#5B0A14] tracking-tight">
+                <h1 class="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">
                     Soto Lamongan Lestari — Ringkasan Resto
                 </h1>
-                <p class="text-xs text-stone-500 mt-0.5">
+                <p class="text-xs text-slate-500 mt-0.5">
                     Performa transaksi harian, margin keuntungan resep, dan kontrol stok bahan baku.
                 </p>
             </div>
@@ -28,8 +28,8 @@
                 <form method="POST" action="{{ route('backoffice.ai-consultant.generate') }}">
                     @csrf
                     <button type="submit" 
-                            class="px-3 py-1.5 rounded-[6px] bg-white border border-[#E7E0D8] text-stone-700 hover:bg-stone-50 text-xs font-semibold transition flex items-center gap-1.5">
-                        <svg class="w-3.5 h-3.5 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-xs transition flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
                         <span>Perbarui Data AI</span>
@@ -37,7 +37,7 @@
                 </form>
 
                 <a href="{{ route('pos.index') }}" 
-                   class="px-3.5 py-1.5 rounded-[6px] bg-[#EA580C] hover:bg-[#D94E07] text-white font-bold text-xs tracking-wide transition flex items-center gap-1.5 active:translate-y-px">
+                   class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs tracking-wide shadow-xs transition flex items-center gap-1.5 active:translate-y-px">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                     </svg>
@@ -49,28 +49,28 @@
         <!-- 2. Compact Row of 4 KPI Metrics (Strict 8px scale, 1px border, tabular numerals) -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <!-- KPI 1: Omzet Hari Ini -->
-            <div class="bg-white rounded-[10px] p-4 border border-[#E7E0D8] flex flex-col justify-between">
+            <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between">
                 <div>
-                    <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">Omzet Penjualan</span>
-                    <div class="text-xl font-display font-bold text-stone-900 font-mono tabular-nums mt-1">
+                    <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Omzet Penjualan</span>
+                    <div class="text-xl font-bold text-slate-800 font-mono tabular-nums mt-1">
                         Rp{{ number_format($metrics['financial']['total_revenue'] ?? 0, 0, ',', '.') }}
                     </div>
                 </div>
-                <div class="mt-3 pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
+                <div class="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                     <span>Akumulasi:</span>
-                    <span class="font-mono tabular-nums font-semibold text-stone-700">Rp{{ number_format($metrics['financial']['all_time_revenue'] ?? 0, 0, ',', '.') }}</span>
+                    <span class="font-mono tabular-nums font-semibold text-slate-700">Rp{{ number_format($metrics['financial']['all_time_revenue'] ?? 0, 0, ',', '.') }}</span>
                 </div>
             </div>
 
             <!-- KPI 2: Total Transaksi -->
-            <div class="bg-white rounded-[10px] p-4 border border-[#E7E0D8] flex flex-col justify-between">
+            <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between">
                 <div>
-                    <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">Total Transaksi</span>
-                    <div class="text-xl font-display font-bold text-stone-900 font-mono tabular-nums mt-1">
-                        {{ $metrics['financial']['transactions'] ?? 0 }} <span class="text-xs font-normal text-stone-400">Pesanan</span>
+                    <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Total Transaksi</span>
+                    <div class="text-xl font-bold text-slate-800 font-mono tabular-nums mt-1">
+                        {{ $metrics['financial']['transactions'] ?? 0 }} <span class="text-xs font-normal text-slate-400">Pesanan</span>
                     </div>
                 </div>
-                <div class="mt-3 pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
+                <div class="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                     <span>Status:</span>
                     <span class="inline-flex items-center gap-1 font-semibold text-emerald-700">
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -80,30 +80,30 @@
             </div>
 
             <!-- KPI 3: Rata-Rata per Pesanan (AOV) -->
-            <div class="bg-white rounded-[10px] p-4 border border-[#E7E0D8] flex flex-col justify-between">
+            <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between">
                 <div>
-                    <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">Rata-Rata per Pesanan (AOV)</span>
-                    <div class="text-xl font-display font-bold text-stone-900 font-mono tabular-nums mt-1">
+                    <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Rata-Rata per Pesanan (AOV)</span>
+                    <div class="text-xl font-bold text-slate-800 font-mono tabular-nums mt-1">
                         Rp{{ number_format($metrics['financial']['aov'] ?? 0, 0, ',', '.') }}
                     </div>
                 </div>
-                <div class="mt-3 pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
+                <div class="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                     <span>Margin Kotor:</span>
                     <span class="font-mono tabular-nums font-semibold text-emerald-700">{{ $metrics['financial']['profit_margin_pct'] ?? 0 }}%</span>
                 </div>
             </div>
 
             <!-- KPI 4: Status Bahan Baku Kritis -->
-            <div class="bg-white rounded-[10px] p-4 border border-[#E7E0D8] flex flex-col justify-between">
+            <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between">
                 <div>
-                    <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">Bahan Baku Menipis</span>
-                    <div class="text-xl font-display font-bold font-mono tabular-nums mt-1 {{ count($lowStockItems) > 0 ? 'text-[#C2410C]' : 'text-stone-900' }}">
+                    <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Bahan Baku Menipis</span>
+                    <div class="text-xl font-bold font-mono tabular-nums mt-1 {{ count($lowStockItems) > 0 ? 'text-amber-600' : 'text-slate-800' }}">
                         {{ count($lowStockItems) > 0 ? count($lowStockItems) . ' Item Perlu Restock' : 'Semua Stok Aman' }}
                     </div>
                 </div>
-                <div class="mt-3 pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
+                <div class="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                     <span>Total Pantauan:</span>
-                    <a href="{{ route('backoffice.inventory') }}" class="font-medium text-[#C2410C] hover:underline">
+                    <a href="{{ route('backoffice.inventory') }}" class="font-medium text-emerald-700 hover:underline">
                         {{ $totalRawMaterialsCount ?? 12 }} Bahan Baku &rarr;
                     </a>
                 </div>

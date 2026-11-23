@@ -101,17 +101,17 @@
     }" class="space-y-5">
 
         <!-- Page Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-[#E7E0D8]">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200/80">
             <div>
-                <h1 class="text-lg sm:text-xl font-display font-bold text-[#5B0A14] tracking-tight">Katalog Menu & Resep (BOM)</h1>
-                <p class="text-xs text-stone-500 mt-0.5">Kelola harga jual, perhitungan HPP resep otomatis, foto menu, dan kategori.</p>
+                <h1 class="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">Katalog Menu & Resep (BOM)</h1>
+                <p class="text-xs text-slate-500 mt-0.5">Kelola harga jual, perhitungan HPP resep otomatis, foto menu, dan kategori.</p>
             </div>
             <div class="flex items-center gap-2">
                 <!-- Export JSON Button -->
                 <a href="{{ route('backoffice.catalog.export') }}" 
-                   class="px-2.5 py-1.5 rounded-[6px] bg-white border border-[#E7E0D8] text-stone-700 hover:bg-stone-50 font-semibold text-xs transition flex items-center gap-1.5"
+                   class="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition flex items-center gap-1.5 shadow-xs"
                    title="Download file data menu & bahan baku (JSON)">
-                    <svg class="w-3.5 h-3.5 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
                     <span>Export</span>
@@ -120,9 +120,9 @@
                 <!-- Import JSON Button -->
                 <button type="button" 
                         @click="importModalOpen = true"
-                        class="px-2.5 py-1.5 rounded-[6px] bg-white border border-[#E7E0D8] text-stone-700 hover:bg-stone-50 font-semibold text-xs transition flex items-center gap-1.5"
+                        class="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition flex items-center gap-1.5 shadow-xs"
                         title="Upload file data menu & bahan baku (JSON)">
-                    <svg class="w-3.5 h-3.5 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
                     <span>Import</span>
@@ -132,36 +132,36 @@
                 <form method="POST" action="{{ route('backoffice.reset-dummy-data') }}" onsubmit="return confirm('PERINGATAN: Seluruh data dummy (produk, transaksi, bahan baku) akan dibersihkan untuk persiapan input data riil.\n\nApakah Anda yakin ingin melanjutkan?')">
                     @csrf
                     <button type="submit" 
-                            class="px-2.5 py-1.5 rounded-[6px] bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 font-semibold text-xs transition flex items-center gap-1.5"
+                            class="px-3 py-2 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 font-semibold text-xs transition flex items-center gap-1.5"
                             title="Kosongkan seluruh data dummy">
-                        <svg class="w-3.5 h-3.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-3.5 h-3.5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
-                        <span>Kosongkan Data Dummy</span>
+                        <span>Kosongkan Dummy</span>
                     </button>
                 </form>
 
                 <!-- Export Excel Menu & HPP Button -->
                 <a href="{{ route('backoffice.products.export-excel') }}" 
-                   class="px-3 py-1.5 rounded-[4px] bg-[#FACC15] hover:bg-yellow-400 text-[#121212] font-black text-xs transition flex items-center gap-1.5 border-2 border-[#121212] shadow-[2px_2px_0px_#121212] active:translate-x-0.5 active:translate-y-0.5"
+                   class="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-semibold text-xs transition flex items-center gap-1.5 shadow-xs"
                    title="Export Seluruh Menu & HPP Resep ke File Excel">
-                    <svg class="w-3.5 h-3.5 text-[#121212]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <span>📥 Export Excel (.xls)</span>
+                    <span>Export Excel (.xls)</span>
                 </a>
 
                 <!-- Tambah Kategori Button -->
                 <button type="button" 
                         @click="categoryModalOpen = true"
-                        class="px-3 py-1.5 rounded-[6px] bg-white border border-[#E7E0D8] text-stone-700 hover:bg-stone-50 font-semibold text-xs transition">
+                        class="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition shadow-xs">
                     Kategori Baru
                 </button>
 
                 <!-- Tambah Produk Button -->
                 <button type="button" 
                         @click="openCreateProductModal()"
-                        class="px-3.5 py-1.5 rounded-[6px] bg-[#EA580C] hover:bg-[#D94E07] text-white font-bold text-xs tracking-wide transition shadow-subtle flex items-center gap-1.5 active:translate-y-px">
+                        class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs tracking-wide transition shadow-xs flex items-center gap-1.5 active:translate-y-px">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
@@ -171,7 +171,7 @@
         </div>
 
         <!-- Category Management Bar -->
-        <div class="bg-white rounded-[10px] p-3.5 border border-[#E7E0D8]">
+        <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs">
             <div class="flex items-center justify-between pb-2 mb-2.5 border-b border-stone-100 text-xs">
                 <span class="font-bold uppercase tracking-wider text-stone-400 text-[10px]">Kategori Terdaftar</span>
                 <span class="text-stone-500 text-[11px] font-mono">{{ $categories->count() }} Kategori</span>

@@ -3,14 +3,14 @@
 
     <div class="space-y-5">
         <!-- Page Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-[#E7E0D8]">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200/80">
             <div>
-                <h1 class="text-lg sm:text-xl font-display font-bold text-[#5B0A14] tracking-tight">AI Resto Business Consultant</h1>
-                <p class="text-xs text-stone-500 mt-0.5">Analisis taktis berbasis LLM cerdas dari metrik omzet, HPP modal resep, dan deteksi anomali transaksi.</p>
+                <h1 class="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">AI Resto Business Consultant</h1>
+                <p class="text-xs text-slate-500 mt-0.5">Analisis taktis berbasis LLM cerdas dari metrik omzet, HPP modal resep, dan deteksi anomali transaksi.</p>
             </div>
             <form method="POST" action="{{ route('backoffice.ai-consultant.generate') }}">
                 @csrf
-                <button type="submit" class="px-3.5 py-1.5 rounded-[6px] bg-[#EA580C] hover:bg-[#D94E07] text-white font-bold text-xs tracking-wide transition shadow-subtle flex items-center gap-1.5 active:translate-y-px">
+                <button type="submit" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs tracking-wide transition shadow-xs flex items-center gap-1.5 active:translate-y-px">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
@@ -21,32 +21,32 @@
 
         @if ($latestReport)
             <!-- Executive Summary Card -->
-            <div class="rounded-[10px] bg-white p-5 border border-[#E7E0D8]">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-stone-100">
+            <div class="rounded-2xl bg-white p-5 border border-slate-200/80 shadow-xs">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                     <div>
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-stone-400 font-mono">Evaluasi Harian</span>
-                        <h2 class="text-sm font-display font-bold text-stone-900 mt-0.5">
+                        <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 font-mono">Evaluasi Harian</span>
+                        <h2 class="text-sm font-bold text-slate-800 mt-0.5">
                             Periode {{ \Carbon\Carbon::parse($latestReport->report_date)->translatedFormat('l, d F Y') }}
                         </h2>
                     </div>
                     <div class="flex items-center gap-2">
-                        <div class="px-3 py-1.5 rounded-[6px] bg-stone-50 border border-stone-200 text-center">
-                            <span class="text-[10px] font-bold text-stone-400 block uppercase font-mono">Resto Health Score</span>
-                            <span class="text-base font-bold font-mono tabular-nums text-[#5B0A14]">{{ $latestReport->ai_insights['health_score'] ?? 85 }}<span class="text-xs text-stone-400 font-normal">/100</span></span>
+                        <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                            <span class="text-[10px] font-semibold text-slate-400 block uppercase font-mono">Resto Health Score</span>
+                            <span class="text-base font-bold font-mono tabular-nums text-emerald-700">{{ $latestReport->ai_insights['health_score'] ?? 85 }}<span class="text-xs text-slate-400 font-normal">/100</span></span>
                         </div>
                     </div>
                 </div>
 
-                <div class="mt-3 p-3 rounded-[6px] bg-stone-50 border border-stone-200 text-stone-800 text-xs leading-relaxed font-medium">
+                <div class="mt-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700 text-xs leading-relaxed font-medium">
                     "{{ $latestReport->ai_insights['executive_summary'] ?? 'Ringkasan performa harian berjalan lancar.' }}"
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <!-- Actionable Recommendations -->
-                <div class="bg-white rounded-[10px] p-5 border border-[#E7E0D8] space-y-3">
-                    <div class="pb-2.5 border-b border-stone-100">
-                        <h3 class="text-xs font-display font-bold text-stone-900 uppercase tracking-wide">Rekomendasi Taktis</h3>
+                <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs space-y-3">
+                    <div class="pb-2.5 border-b border-slate-100">
+                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wide">Rekomendasi Taktis</h3>
                     </div>
 
                     <div class="space-y-2">
