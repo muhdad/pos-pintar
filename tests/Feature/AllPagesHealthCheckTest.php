@@ -19,11 +19,6 @@ class AllPagesHealthCheckTest extends TestCase
     {
         parent::setUp();
 
-        $this->adminUser = User::first() ?? User::factory()->create([
-            'role' => 'SUPERADMIN',
-            'is_active' => true,
-        ]);
-
         $this->tenant = Tenant::first() ?? Tenant::create([
             'name' => 'Soto Lamongan Lestari',
             'slug' => 'sll-test',
@@ -35,6 +30,14 @@ class AllPagesHealthCheckTest extends TestCase
             'name' => 'SLL Cabang Utama',
             'address' => 'Jl. Lamongan No. 1',
         ]);
+
+        $this->adminUser = User::first() ?? User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'role' => 'SUPERADMIN',
+            'is_active' => true,
+        ]);
+
+        $this->adminUser->update(['tenant_id' => $this->tenant->id]);
     }
 
     public function test_welcome_page_redirects_to_login_when_unauthenticated()
@@ -209,11 +212,32 @@ class AllPagesHealthCheckTest extends TestCase
     {
         $this->adminUser->update(['pin_hash' => \Illuminate\Support\Facades\Hash::make('1234')]);
 
-        $response = $this->postJson('/api/pos/verify-pin', [
+        $response = $this->actingAs($this->adminUser)->postJson('/api/pos/verify-pin', [
             'pin' => '1234',
         ]);
 
         $response->assertStatus(200);
         $response->assertJson(['success' => true]);
+    }
+
+    public function test_can_destroy_test_order()
+    {
+        $order = \App\Models\Order::create([
+            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'tenant_id' => $this->tenant->id,
+            'outlet_id' => $this->outlet->id,
+            'user_id' => $this->adminUser->id,
+            'order_number' => 'TEST-001',
+            'status' => 'PAID',
+            'total_amount' => 60000,
+            'discount_amount' => 0,
+            'tax_amount' => 0,
+            'final_amount' => 60000,
+        ]);
+
+        $response = $this->actingAs($this->adminUser)->delete(route('backoffice.orders.destroy', $order));
+
+        $response->assertRedirect();
+        $this->assertDatabaseMissing('orders', ['id' => $order->id]);
     }
 }

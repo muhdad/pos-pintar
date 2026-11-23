@@ -645,6 +645,34 @@ class BackofficeController extends Controller
     }
 
     /**
+     * Hapus permanen transaksi (khusus testing atau koreksi data fatal) dengan reversal stok otomatis.
+     */
+    public function destroyOrder(Request $request, Order $order): RedirectResponse
+    {
+        $orderNumber = $order->order_number;
+
+        DB::transaction(function () use ($order) {
+            // Jika pesanan belum di-VOID, kembalikan stok bahan bakunya dulu agar tidak hilang
+            if ($order->status !== 'VOIDED') {
+                $this->inventoryService->revertForOrder($order, 'Penghapusan transaksi testing oleh admin');
+            }
+
+            // Bebaskan nomor meja jika transaksi terikat pada meja tertentu
+            if (! empty($order->table_id)) {
+                \App\Models\Table::where('id', $order->table_id)->update([
+                    'is_occupied' => false,
+                    'current_order_id' => null,
+                ]);
+            }
+
+            // Hapus pesanan (order_items dan payments terhapus otomatis via database cascade)
+            $order->delete();
+        });
+
+        return back()->with('status', "Transaksi #{$orderNumber} berhasil dihapus permanen. Stok bahan baku telah dikembalikan dan omzet tidak terhitung di cashflow.");
+    }
+
+    /**
      * Catat Penyesuaian Fisik Stok Gudang (Stock Opname).
      */
     public function recordOpname(Request $request): RedirectResponse

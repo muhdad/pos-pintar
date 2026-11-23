@@ -46,11 +46,12 @@ Route::middleware(['auth', 'verified', 'role:SUPERADMIN,OWNER,MANAGER,FINANCE'])
         Route::post('/inventory/ocr-scan', [BackofficeController::class, 'scanReceiptOcr'])->name('inventory.ocr-scan');
         Route::post('/inventory/ocr-confirm', [BackofficeController::class, 'confirmOcrRestock'])->name('inventory.ocr-confirm');
 
-        // Riwayat Transaksi, Export CSV/Excel & Void
+        // Riwayat Transaksi, Export CSV/Excel, Void & Hapus Transaksi
         Route::get('/orders', [BackofficeController::class, 'orders'])->name('orders');
         Route::get('/orders/export-csv', [BackofficeController::class, 'exportOrdersCsv'])->name('orders.export-csv');
         Route::get('/orders/export-excel', [BackofficeController::class, 'exportOrdersExcel'])->name('orders.export-excel');
         Route::post('/orders/{order}/void', [BackofficeController::class, 'voidOrderBackoffice'])->name('orders.void');
+        Route::delete('/orders/{order}', [BackofficeController::class, 'destroyOrder'])->name('orders.destroy');
 
         // Modul Keuangan & Arus Kas (Hanya Superadmin, Owner, dan Finance)
         Route::middleware(['role:SUPERADMIN,OWNER,FINANCE'])->group(function () {

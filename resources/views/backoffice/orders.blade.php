@@ -85,18 +85,33 @@
                                 </td>
                                 <td class="py-3 px-3 text-center">
                                     <span class="inline-block px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold {{ $order->status === 'PAID' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200' }}">
-                                        {{ $order->status === 'PAID' ? 'Lunas' : $order->status }}
+                                        {{ $order->status === 'PAID' ? 'Lunas' : ($order->status === 'VOIDED' ? 'Batal (VOID)' : $order->status) }}
                                     </span>
                                 </td>
                                 <td class="py-3 px-3 text-right font-mono tabular-nums font-bold text-stone-900">
                                     Rp{{ number_format($order->final_amount, 0, ',', '.') }}
                                 </td>
                                 <td class="py-3 px-4 text-right">
-                                    <button type="button" 
-                                            @click="openDetail({{ json_encode($order) }})"
-                                            class="px-2 py-1 rounded-[4px] bg-stone-50 hover:bg-stone-100 text-stone-700 border border-stone-200 text-xs font-semibold transition ml-auto">
-                                        Detail
-                                    </button>
+                                    <div class="flex items-center justify-end gap-1.5">
+                                        <button type="button" 
+                                                @click="openDetail({{ json_encode($order) }})"
+                                                class="px-2 py-1 rounded-[4px] bg-stone-50 hover:bg-stone-100 text-stone-700 border border-stone-200 text-xs font-semibold transition">
+                                            Detail
+                                        </button>
+                                        <form action="{{ route('backoffice.orders.destroy', $order) }}" 
+                                              method="POST" 
+                                              onsubmit="return confirm('Hapus permanen transaksi #{{ $order->order_number }}? Stok bahan baku otomatis dikembalikan dan tidak akan masuk ke hitungan omzet/cashflow.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" 
+                                                    title="Hapus Transaksi Testing"
+                                                    class="p-1 rounded-[4px] bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
@@ -187,8 +202,25 @@
                           class="mt-2.5 pt-2 border-t border-stone-100 flex items-center gap-1.5">
                         @csrf
                         <input type="text" name="reason" required placeholder="Alasan void (misal: salah input kasir)" class="flex-1 text-[11px] bg-stone-50 border border-stone-200 rounded-[4px] px-2 py-1 text-stone-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500">
-                        <button type="submit" class="px-2.5 py-1 rounded-[4px] bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition shrink-0">
+                        <button type="submit" class="px-2.5 py-1 rounded-[4px] bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition shrink-0">
                             Void Pesanan
+                        </button>
+                    </form>
+                </template>
+
+                <template x-if="selectedOrder">
+                    <form :action="'/backoffice/orders/' + selectedOrder.id" 
+                          method="POST" 
+                          onsubmit="return confirm('Hapus permanen transaksi testing ini? Seluruh data transaksi ini akan dibersihkan, stok bahan baku dikembalikan, dan tidak akan mempengaruhi cashflow.')" 
+                          class="mt-2 flex items-center justify-between bg-red-50/60 p-2 rounded-[6px] border border-red-200">
+                        @csrf
+                        <input type="hidden" name="_method" value="DELETE">
+                        <span class="text-[10px] text-red-700 font-medium">Hapus permanen transaksi testing:</span>
+                        <button type="submit" class="px-2 py-1 rounded-[4px] bg-red-600 hover:bg-red-700 text-white font-bold text-[11px] transition shrink-0 flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            <span>Hapus Transaksi</span>
                         </button>
                     </form>
                 </template>

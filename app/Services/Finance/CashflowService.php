@@ -24,13 +24,13 @@ class CashflowService
         // 1. Omzet Kemarin (H-1) dari Order Selesai
         $omzetH1 = (float) Order::where('outlet_id', $outletId)
             ->whereDate('created_at', $yesterday)
-            ->where('status', 'COMPLETED')
+            ->whereIn('status', ['PAID', 'COMPLETED'])
             ->sum('final_amount');
 
         // Cash vs Non-Cash H-1
         $omzetH1Cash = (float) Order::where('outlet_id', $outletId)
             ->whereDate('created_at', $yesterday)
-            ->where('status', 'COMPLETED')
+            ->whereIn('status', ['PAID', 'COMPLETED'])
             ->whereHas('payments', fn ($q) => $q->where('method', 'CASH'))
             ->sum('final_amount');
 
@@ -62,36 +62,57 @@ class CashflowService
         $defisitH1 = max(0, $totalTodayExpense - $omzetH1);
         $rasioBelanjaH1 = $omzetH1 > 0 ? round(($totalTodayExpense / $omzetH1) * 100, 1) : 0;
 
-        // 4. Omzet Hari Ini (Hari H berjalan)
+        // 4. Omzet Hari Ini (Hari H berjalan dari POS kasir)
         $omzetHariIni = (float) Order::where('outlet_id', $outletId)
             ->whereDate('created_at', $today)
-            ->where('status', 'COMPLETED')
+            ->whereIn('status', ['PAID', 'COMPLETED'])
             ->sum('final_amount');
 
-        // 5. Akumulasi Omzet Tertahan Bulan Ini (Pencairan Bulanan / Monthly Withdrawal)
-        // Karena sistem pencairan uang ditarik 1 bulan sekali, hitung total omzet bulan ini dikurangi total pembelanjaan
+        // 4b. Pemasukan Kas Manual Hari Ini (Inflows dari cashflows table: Setoran Modal, dll.)
+        $todayManualIncome = (float) Cashflow::where('outlet_id', $outletId)
+            ->whereDate('transaction_date', $today)
+            ->where('type', 'INFLOW')
+            ->sum('amount');
+
+        // TOTAL UANG MASUK HARI INI (IN = Omzet Kasir + Pemasukan Manual)
+        $totalTodayInflow = $omzetHariIni + $todayManualIncome;
+
+        // TOTAL UANG KELUAR HARI INI (OUT = Belanja Restock + Operasional + Kas Kecil)
+        $totalTodayOutflow = $totalTodayExpense;
+
+        // SISA KEUANGAN AKHIR HARI INI (NET BALANCE = IN - OUT)
+        $netBalanceToday = $totalTodayInflow - $totalTodayOutflow;
+
+        // 5. Akumulasi Omzet & Pemasukan Tertahan Bulan Ini (Pencairan Bulanan / Monthly Withdrawal)
         $startOfMonth = (clone $today)->startOfMonth();
         $monthRevenue = (float) Order::where('outlet_id', $outletId)
             ->whereBetween('created_at', [$startOfMonth->copy()->startOfDay(), $today->copy()->endOfDay()])
-            ->where('status', 'COMPLETED')
+            ->whereIn('status', ['PAID', 'COMPLETED'])
             ->sum('final_amount');
+
+        $monthManualIncome = (float) Cashflow::where('outlet_id', $outletId)
+            ->whereBetween('transaction_date', [$startOfMonth->toDateString(), $today->toDateString()])
+            ->where('type', 'INFLOW')
+            ->sum('amount');
+
+        $totalMonthInflow = $monthRevenue + $monthManualIncome;
 
         $monthExpense = (float) Cashflow::where('outlet_id', $outletId)
             ->whereBetween('transaction_date', [$startOfMonth->toDateString(), $today->toDateString()])
             ->where('type', 'OUTFLOW')
             ->sum('amount');
 
-        $retainedMonthlyFund = max(0, $monthRevenue - $monthExpense);
+        $monthNetBalance = $totalMonthInflow - $monthExpense;
+        $retainedMonthlyFund = max(0, $monthNetBalance);
 
-        // 6. Data Persentase Pie Chart (Distribusi Perputaran Kas)
-        // Hitung persentase dari Total Penggunaan Dana (Belanja Bahan + Operasional + Sisa Kas H-1)
+        // 6. Data Persentase Pie Chart (Distribusi Perputaran Kas dengan Pastel Palette)
         $baseTotalPie = $omzetH1 > 0 ? $omzetH1 : ($totalTodayExpense > 0 ? $totalTodayExpense : 1);
         
         $pctRestock = $baseTotalPie > 0 ? round(($todayRestock / $baseTotalPie) * 100, 1) : 0;
         $pctOperational = $baseTotalPie > 0 ? round((($todayOperational + $todayOtherExpense) / $baseTotalPie) * 100, 1) : 0;
         $pctRetained = max(0, round(100 - ($pctRestock + $pctOperational), 1));
 
-        // SVG Donut Calculation parameters (stroke-dasharray based on circumference 314.16 for r=50)
+        // SVG Donut Calculation parameters (circumference 314.16 for r=50)
         $circumference = 314.16;
         $strokeRestock = ($pctRestock / 100) * $circumference;
         $strokeOperational = ($pctOperational / 100) * $circumference;
@@ -100,26 +121,38 @@ class CashflowService
         return [
             'today_date' => $today->translatedFormat('d M Y'),
             'yesterday_date' => $yesterday->translatedFormat('d M Y'),
+            // Point 1: Masuk Tercatat
+            'omzet_hari_ini' => $omzetHariIni,
+            'today_manual_income' => $todayManualIncome,
+            'total_today_inflow' => $totalTodayInflow,
             'omzet_h1' => $omzetH1,
             'omzet_h1_cash' => $omzetH1Cash,
             'omzet_h1_non_cash' => $omzetH1NonCash,
+            // Point 2: Pengeluaran Tercatat
             'today_restock' => $todayRestock,
             'today_operational' => $todayOperational,
             'today_other_expense' => $todayOtherExpense,
             'total_today_expense' => $totalTodayExpense,
+            'total_today_outflow' => $totalTodayOutflow,
+            'rasio_belanja_h1' => $rasioBelanjaH1,
+            // Point 3: In - Out Sisa Keuangan Akhir Terlihat
+            'net_balance_today' => $netBalanceToday,
             'sisa_kas_h1' => $sisaKasH1,
             'defisit_h1' => $defisitH1,
-            'rasio_belanja_h1' => $rasioBelanjaH1,
-            'omzet_hari_ini' => $omzetHariIni,
+            // Akumulasi Bulanan
             'month_revenue' => $monthRevenue,
+            'month_manual_income' => $monthManualIncome,
+            'total_month_inflow' => $totalMonthInflow,
             'month_expense' => $monthExpense,
+            'month_net_balance' => $monthNetBalance,
             'retained_monthly_fund' => $retainedMonthlyFund,
+            // Point 4: Pastel Color Palette
             'pie_chart' => [
                 'restock' => [
                     'label' => 'Belanja Bahan Baku (Restock)',
                     'amount' => $todayRestock,
                     'percentage' => $pctRestock,
-                    'color' => '#1D4ED8', // Bauhaus Cobalt Blue
+                    'color' => '#38BDF8', // Pastel Sky Blue
                     'stroke_length' => $strokeRestock,
                     'stroke_offset' => 0,
                 ],
@@ -127,7 +160,7 @@ class CashflowService
                     'label' => 'Operasional & Kas Kecil',
                     'amount' => $todayOperational + $todayOtherExpense,
                     'percentage' => $pctOperational,
-                    'color' => '#DC2626', // Bauhaus Crimson Red
+                    'color' => '#FB7185', // Pastel Rose / Coral
                     'stroke_length' => $strokeOperational,
                     'stroke_offset' => -$strokeRestock,
                 ],
@@ -135,7 +168,7 @@ class CashflowService
                     'label' => 'Sisa Kas Omzet H-1',
                     'amount' => $sisaKasH1,
                     'percentage' => $pctRetained,
-                    'color' => '#FACC15', // Bauhaus Canary Yellow
+                    'color' => '#34D399', // Pastel Emerald Mint
                     'stroke_length' => $strokeRetained,
                     'stroke_offset' => -($strokeRestock + $strokeOperational),
                 ],

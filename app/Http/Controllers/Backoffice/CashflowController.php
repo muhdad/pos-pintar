@@ -41,13 +41,27 @@ class CashflowController extends Controller
 
         $mutations = $this->cashflowService->getMutationList($outlet->id, $filters);
 
+        // Ringkasan Total Inflow, Outflow & Saldo Bersih untuk Buku Kas / Mutasi Terdaftar
+        $ledgerSummary = [
+            'total_inflow' => (float) Cashflow::where('outlet_id', $outlet->id)
+                ->where('type', 'INFLOW')
+                ->when(! empty($filters['date']), fn ($q) => $q->whereDate('transaction_date', $filters['date']))
+                ->sum('amount'),
+            'total_outflow' => (float) Cashflow::where('outlet_id', $outlet->id)
+                ->where('type', 'OUTFLOW')
+                ->when(! empty($filters['date']), fn ($q) => $q->whereDate('transaction_date', $filters['date']))
+                ->sum('amount'),
+        ];
+        $ledgerSummary['net_balance'] = $ledgerSummary['total_inflow'] - $ledgerSummary['total_outflow'];
+
         return view('backoffice.cashflow.index', compact(
             'tenant',
             'outlet',
             'metrics',
             'mutations',
             'selectedDate',
-            'filters'
+            'filters',
+            'ledgerSummary'
         ));
     }
 
