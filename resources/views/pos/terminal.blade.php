@@ -137,12 +137,28 @@
                         <div class="flex items-center justify-between pb-2 border-b border-slate-100">
                             <span class="font-bold text-slate-800">Printer Thermal Kasir</span>
                             <span class="text-[10px] px-2 py-0.5 rounded font-mono font-bold" 
-                                  :class="window.thermalPrinter?.isConnected ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'"
-                                  x-text="window.thermalPrinter?.isConnected ? 'TERHUBUNG' : 'BELUM TERHUBUNG'"></span>
+                                  :class="window.thermalPrinter?.useRawBt ? 'bg-amber-100 text-amber-800' : (window.thermalPrinter?.isConnected ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600')"
+                                  x-text="window.thermalPrinter?.useRawBt ? 'RAWBT AKTIF' : (window.thermalPrinter?.isConnected ? 'TERHUBUNG' : 'BELUM TERHUBUNG')"></span>
+                        </div>
+
+                        <!-- Mode RawBT Rekomendasi Android -->
+                        <div class="p-2.5 rounded-xl bg-amber-50 border border-amber-200/80 space-y-1.5">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-amber-900">Mode RawBT (Android)</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" 
+                                           :checked="window.thermalPrinter?.useRawBt" 
+                                           @change="window.thermalPrinter && window.thermalPrinter.toggleRawBt($event.target.checked)" 
+                                           class="rounded text-amber-600 focus:ring-amber-500 w-4 h-4">
+                                </label>
+                            </div>
+                            <p class="text-[10px] text-amber-800 leading-snug">
+                                ⭐ <strong>Rekomendasi Utama Tablet Android</strong>: Mendukung SEMUA merk printer Bluetooth 58mm (Bluetooth Classic SPP & BLE) via aplikasi RawBT resmi di Play Store.
+                            </p>
                         </div>
 
                         <p class="text-[11px] text-slate-500">
-                            Cetak struk 58mm / 80mm langsung keluar kertas <strong>tanpa muncul jendela settingan browser</strong>.
+                            Atau sambungkan langsung via Web Bluetooth / USB OTG:
                         </p>
 
                         <div class="space-y-1.5">
@@ -150,7 +166,7 @@
                                     @click="window.thermalPrinter && window.thermalPrinter.connectBluetooth(); printerMenuOpen = false" 
                                     class="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs flex items-center justify-center gap-2 transition active:scale-95">
                                 <span>📶</span>
-                                <span>Hubungkan Bluetooth (Wireless)</span>
+                                <span>Hubungkan Bluetooth (BLE)</span>
                             </button>
 
                             <button type="button" 
@@ -159,6 +175,18 @@
                                 <span>🔌</span>
                                 <span>Hubungkan Kabel USB (OTG)</span>
                             </button>
+                        </div>
+
+                        <!-- Bantuan Bluetooth Android -->
+                        <div x-data="{ helpOpen: false }" class="pt-1">
+                            <button type="button" @click="helpOpen = !helpOpen" class="text-[10px] text-blue-600 hover:text-blue-800 font-medium underline flex items-center gap-1">
+                                <span>❓ Bluetooth tidak terdeteksi di Android?</span>
+                            </button>
+                            <div x-show="helpOpen" class="mt-1.5 p-2 bg-slate-50 rounded-xl text-[9px] text-slate-600 space-y-1 border border-slate-200">
+                                <p><strong>1. GPS / Lokasi Wajib Aktif:</strong> Android mewajibkan Lokasi di quick settings aktif agar Chrome diizinkan scan Bluetooth.</p>
+                                <p><strong>2. Printer Bluetooth Classic:</strong> Mayoritas printer kasir 58mm murah di Indonesia adalah Bluetooth Classic (SPP). Aktifkan <em>Mode RawBT</em> di atas agar terhubung 100%.</p>
+                                <p><strong>3. Chrome HTTP Flag:</strong> Di Chrome tablet buka <code class="text-slate-800">chrome://flags</code> -> cari <em>unsafely-treat-insecure-origin-as-secure</em> -> masukkan URL ini.</p>
+                            </div>
                         </div>
 
                         <div class="pt-2 border-t border-slate-100 space-y-1.5">

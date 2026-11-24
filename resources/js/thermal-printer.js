@@ -20,6 +20,53 @@ export class ThermalPrinter {
         this.paperWidth = 58; // Default 58mm (32 kolom), opsi 80mm (42 kolom)
         this.autoPrintEnabled = localStorage.getItem('POS_AUTO_PRINT') !== 'false';
         this.printerName = localStorage.getItem('POS_PRINTER_NAME') || '';
+        this.useRawBt = localStorage.getItem('POS_USE_RAWBT') === 'true';
+    }
+
+    /**
+     * Deteksi apakah perangkat menggunakan OS Android
+     */
+    isAndroid() {
+        return typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+    }
+
+    /**
+     * Aktifkan / Matikan mode RawBT khusus Android
+     */
+    toggleRawBt(val) {
+        this.useRawBt = typeof val === 'boolean' ? val : !this.useRawBt;
+        localStorage.setItem('POS_USE_RAWBT', this.useRawBt ? 'true' : 'false');
+        return this.useRawBt;
+    }
+
+    /**
+     * Konversi Uint8Array ESC/POS ke Base64 String
+     */
+    uint8ToBase64(uint8Array) {
+        let binary = '';
+        const len = uint8Array.byteLength;
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(uint8Array[i]);
+        }
+        return window.btoa(binary);
+    }
+
+    /**
+     * Cetak langsung via Aplikasi RawBT di Android.
+     * Solusi #1 paling stabil & kompatibel untuk SEMUA printer Bluetooth di Indonesia (Bluetooth Classic 2.0/3.0 SPP maupun BLE).
+     */
+    printRawBt(order) {
+        if (!order) return false;
+        try {
+            const bytes = this.buildEscPosBytes(order);
+            const base64Data = this.uint8ToBase64(bytes);
+            const rawBtUrl = `intent:base64,${base64Data}#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;`;
+            window.location.href = rawBtUrl;
+            return true;
+        } catch (err) {
+            console.error('Gagal cetak via RawBT:', err);
+            return this.printBrowser(order);
+        }
     }
 
     /**
@@ -28,7 +75,12 @@ export class ThermalPrinter {
      */
     async connectBluetooth() {
         if (!navigator.bluetooth) {
-            alert('Browser ini belum mendukung Web Bluetooth. Gunakan Google Chrome pada Android/PC/Mac.');
+            const isHttp = window.location.protocol === 'http:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+            if (isHttp) {
+                alert('⚠️ Web Bluetooth dibatasi Google Chrome pada koneksi HTTP (bukan HTTPS).\n\nSolusi Cepat Android:\n1. Aktifkan Mode RawBT di menu printer (Gunakan aplikasi RawBT gratis di Play Store — bekerja untuk SEMUA merk printer Bluetooth/USB),\nATAU\n2. Buka tab baru di Chrome tablet: chrome://flags -> cari "unsafely-treat-insecure-origin-as-secure" -> tambahkan ' + window.location.origin + ' -> Relaunch Chrome.');
+            } else {
+                alert('Browser ini belum mendukung Web Bluetooth. Gunakan Google Chrome versi terbaru.');
+            }
             return false;
         }
 
@@ -104,7 +156,9 @@ export class ThermalPrinter {
             return true;
         } catch (error) {
             console.error('Gagal menghubungkan Bluetooth Printer:', error);
-            if (error.name !== 'NotFoundError') {
+            if (error.name === 'NotFoundError') {
+                alert('⚠️ Printer tidak ditemukan atau dialog pemilihan dibatalkan.\n\nPenyebab Umum di Tablet Android:\n1. GPS / Lokasi tablet MATI (Wajib AKTIF di Android agar Chrome bisa scan Bluetooth).\n2. Printer kasir Anda bertipe Bluetooth Classic 2.0/3.0 SPP (Chrome Web Bluetooth hanya mendeteksi tipe BLE).\n\n👉 Solusi Terbaik: Aktifkan "Mode RawBT" di menu printer untuk langsung mencetak via aplikasi RawBT.');
+            } else {
                 alert('Gagal menghubungkan printer: ' + error.message);
             }
             return false;
@@ -167,8 +221,9 @@ export class ThermalPrinter {
 
     /**
      * Cetak Struk Transaksi Utama
-     * 1. Jika Bluetooth / USB terhubung: Kirim byte ESC/POS langsung (0ms tanpa dialog browser).
-     * 2. Jika tidak terhubung: Panggil window.print() (Cetak instan / silent print jika pakai flag --kiosk-printing).
+     * 1. Mode RawBT (Android): Kirim langsung via Android Intent ke aplikasi RawBT (0ms).
+     * 2. Direct Web Bluetooth / WebUSB: Kirim byte ESC/POS langsung (0ms tanpa dialog browser).
+     * 3. Fallback: Panggil window.print() (Cetak instan / silent print jika pakai flag --kiosk-printing).
      */
     async printReceipt(order) {
         if (!order) {
@@ -178,6 +233,12 @@ export class ThermalPrinter {
 
         document.body.classList.remove('print-kot');
 
+        // Prioritas 1: Mode RawBT (Khusus Android - Mendukung Bluetooth Classic SPP & BLE)
+        if (this.useRawBt || localStorage.getItem('POS_USE_RAWBT') === 'true') {
+            return this.printRawBt(order);
+        }
+
+        // Prioritas 2: Direct Web Bluetooth
         if (this.isConnected && this.connectionType === 'bluetooth' && this.characteristic) {
             return await this.sendEscPosBluetooth(order);
         } else if (this.isConnected && this.connectionType === 'usb' && this.usbDevice) {

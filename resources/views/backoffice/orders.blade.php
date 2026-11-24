@@ -297,13 +297,22 @@
                 </template>
 
                 <!-- Strip Status Printer Thermal -->
-                <div class="p-2.5 bg-stone-50 rounded-xl border border-stone-200/80 flex items-center justify-between text-xs">
-                    <span class="text-[11px] text-stone-600 font-medium">Printer: <strong class="text-emerald-700 font-mono" x-text="window.thermalPrinter?.isConnected ? (window.thermalPrinter.printerName || '58mm Terhubung') : 'Siap Cetak 58mm'"></strong></span>
-                    <button type="button" 
-                            @click="window.thermalPrinter && window.thermalPrinter.connectBluetooth()" 
-                            class="text-[10px] font-bold text-emerald-800 bg-white px-2 py-1 rounded-lg border border-stone-200 hover:bg-emerald-50">
-                        Pairing Bluetooth
-                    </button>
+                <div class="p-2.5 bg-stone-50 rounded-xl border border-stone-200/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span class="text-[11px] text-stone-600 font-medium">Printer: <strong class="text-emerald-700 font-mono" x-text="window.thermalPrinter?.useRawBt ? 'RawBT (Android)' : (window.thermalPrinter?.isConnected ? (window.thermalPrinter.printerName || '58mm Terhubung') : 'Siap Cetak 58mm')"></strong></span>
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" 
+                                @click="window.thermalPrinter && window.thermalPrinter.toggleRawBt(); $forceUpdate()" 
+                                class="text-[10px] font-bold px-2 py-1 rounded-lg border transition"
+                                :class="window.thermalPrinter?.useRawBt ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'"
+                                title="Gunakan aplikasi RawBT Android untuk printer Bluetooth">
+                            <span x-text="window.thermalPrinter?.useRawBt ? '✓ RawBT Aktif' : 'Mode RawBT'"></span>
+                        </button>
+                        <button type="button" 
+                                @click="window.thermalPrinter && window.thermalPrinter.connectBluetooth()" 
+                                class="text-[10px] font-bold text-emerald-800 bg-white px-2 py-1 rounded-lg border border-stone-200 hover:bg-emerald-50">
+                            Pairing BLE
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Action Buttons: Print Struk & Tutup -->
