@@ -90,8 +90,19 @@ class AllPagesHealthCheckTest extends TestCase
 
     public function test_orders_page_loads_successfully()
     {
+        $order = \App\Models\Order::create([
+            'tenant_id' => $this->tenant->id,
+            'outlet_id' => $this->outlet->id,
+            'order_number' => 'POS-20261124-KGH86',
+            'status' => 'PAID',
+            'total_amount' => 33000,
+            'final_amount' => 33000,
+            'user_id' => $this->adminUser->id,
+        ]);
         $response = $this->actingAs($this->adminUser)->get('/backoffice/orders');
         $response->assertStatus(200);
+        $response->assertSee('POS-20261124-KGH86');
+        $response->assertSee('Buka Struk');
     }
 
     public function test_cashflow_page_loads_successfully()

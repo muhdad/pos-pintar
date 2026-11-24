@@ -1,14 +1,43 @@
 <x-app-layout>
     @section('page_title', 'Riwayat Transaksi')
 
+    <script>
+        window.BACKOFFICE_ORDERS = @json($orders->items());
+    </script>
+
     <div x-data="{
-        ordersList: {{ Js::from($orders->items()) }},
+        ordersList: window.BACKOFFICE_ORDERS || [],
         detailModalOpen: false,
         selectedOrder: null,
+        useRawBt: localStorage.getItem('POS_USE_RAWBT') === 'true',
 
-        openDetail(orderId) {
-            this.selectedOrder = this.ordersList.find(o => String(o.id) === String(orderId) || String(o.order_number) === String(orderId)) || null;
+        init() {
+            if (window.thermalPrinter) {
+                this.useRawBt = window.thermalPrinter.useRawBt;
+            }
+        },
+
+        openDetail(orderOrId) {
+            if (orderOrId && typeof orderOrId === 'object' && (orderOrId.id || orderOrId.order_number)) {
+                this.selectedOrder = orderOrId;
+                this.detailModalOpen = true;
+                return;
+            }
+            const idStr = String(orderOrId || '');
+            const list = Array.isArray(this.ordersList) 
+                ? this.ordersList 
+                : (Array.isArray(window.BACKOFFICE_ORDERS) ? window.BACKOFFICE_ORDERS : Object.values(window.BACKOFFICE_ORDERS || {}));
+            this.selectedOrder = list.find(o => String(o?.id) === idStr || String(o?.order_number) === idStr) || null;
             this.detailModalOpen = true;
+        },
+
+        toggleRawBtMode() {
+            if (window.thermalPrinter) {
+                this.useRawBt = window.thermalPrinter.toggleRawBt();
+            } else {
+                this.useRawBt = !this.useRawBt;
+                localStorage.setItem('POS_USE_RAWBT', this.useRawBt ? 'true' : 'false');
+            }
         },
 
         printCurrentReceipt() {
@@ -66,8 +95,11 @@
         <!-- Orders View for Tablet & Mobile (Card Layout - Touch Friendly) -->
         <div class="block md:hidden space-y-3">
             @forelse ($orders as $order)
-                <div class="bg-white rounded-2xl border border-stone-200/80 p-4 shadow-xs space-y-2.5 active:bg-stone-50 transition"
-                     @click="openDetail('{{ $order->id }}')">
+                @php
+                    $orderData = json_encode($order);
+                @endphp
+                <div class="bg-white rounded-2xl border border-stone-200/80 p-4 shadow-xs space-y-2.5 active:bg-stone-50 transition cursor-pointer select-none"
+                     @click="openDetail({{ $orderData }})">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
                             <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs">
@@ -105,8 +137,8 @@
                                 {{ $order->payments->first()->method ?? 'CASH' }}
                             </span>
                             <button type="button" 
-                                    @click.stop="openDetail('{{ $order->id }}')"
-                                    class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-xs active:scale-95 transition">
+                                    @click.stop="openDetail({{ $orderData }})"
+                                    class="px-3.5 py-2 rounded-xl bg-emerald-600 active:bg-emerald-700 text-white text-xs font-bold shadow-xs active:scale-95 transition">
                                 Buka Struk
                             </button>
                         </div>
@@ -137,18 +169,21 @@
                     </thead>
                     <tbody class="divide-y divide-stone-100">
                         @forelse ($orders as $order)
-                            <tr class="hover:bg-emerald-50/40 transition cursor-pointer"
-                                @click="openDetail('{{ $order->id }}')">
-                                <td class="py-3 px-4 font-bold text-stone-900 font-mono tabular-nums">
+                            @php
+                                $orderData = json_encode($order);
+                            @endphp
+                            <tr class="hover:bg-emerald-50/50 transition cursor-pointer select-none"
+                                @click="openDetail({{ $orderData }})">
+                                <td class="py-3.5 px-4 font-bold text-stone-900 font-mono tabular-nums">
                                     {{ $order->order_number }}
                                 </td>
-                                <td class="py-3 px-3 text-stone-500 font-mono tabular-nums text-[11px]">
+                                <td class="py-3.5 px-3 text-stone-500 font-mono tabular-nums text-[11px]">
                                     {{ $order->created_at->format('d/m/Y H:i') }}
                                 </td>
-                                <td class="py-3 px-3 font-medium text-stone-800">
+                                <td class="py-3.5 px-3 font-medium text-stone-800">
                                     {{ $order->user->name ?? 'Kasir SLL' }}
                                 </td>
-                                <td class="py-3 px-3 text-stone-700 max-w-xs">
+                                <td class="py-3.5 px-3 text-stone-700 max-w-xs">
                                     <div class="space-y-0.5">
                                         @foreach ($order->items as $it)
                                             <div class="text-[11px] truncate">
@@ -158,34 +193,37 @@
                                         @endforeach
                                     </div>
                                 </td>
-                                <td class="py-3 px-3">
+                                <td class="py-3.5 px-3">
                                     <span class="inline-block px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-stone-100 text-stone-700 border border-stone-200">
                                         {{ $order->payments->first()->method ?? 'CASH' }}
                                     </span>
                                 </td>
-                                <td class="py-3 px-3 text-center">
+                                <td class="py-3.5 px-3 text-center">
                                     <span class="inline-block px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold {{ $order->status === 'PAID' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200' }}">
                                         {{ $order->status === 'PAID' ? 'Lunas' : ($order->status === 'VOIDED' ? 'Batal (VOID)' : $order->status) }}
                                     </span>
                                 </td>
-                                <td class="py-3 px-3 text-right font-mono tabular-nums font-bold text-stone-900">
+                                <td class="py-3.5 px-3 text-right font-mono tabular-nums font-bold text-stone-900">
                                     Rp{{ number_format($order->final_amount, 0, ',', '.') }}
                                 </td>
-                                <td class="py-3 px-4 text-right" @click.stop>
+                                <td class="py-3.5 px-4 text-right">
                                     <div class="flex items-center justify-end gap-1.5">
                                         <button type="button" 
-                                                @click="openDetail('{{ $order->id }}')"
-                                                class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold transition">
+                                                @click.stop="openDetail({{ $orderData }})"
+                                                class="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-800 border border-emerald-300 text-xs font-bold transition shadow-xs flex items-center gap-1 active:scale-95"
+                                                title="Buka Struk Pembayaran">
                                             Buka Struk
                                         </button>
                                         <form action="{{ route('backoffice.orders.destroy', $order) }}" 
                                               method="POST" 
+                                              @click.stop
                                               onsubmit="return confirm('Hapus permanen transaksi #{{ $order->order_number }}? Stok bahan baku otomatis dikembalikan dan tidak akan masuk ke hitungan omzet/cashflow.')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" 
+                                                    @click.stop
                                                     title="Hapus Transaksi Testing"
-                                                    class="p-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition">
+                                                    class="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition">
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                 </svg>
@@ -216,9 +254,9 @@
         <!-- Detail Struk Modal (Ringan, Tanpa Backdrop-Blur Berat, Touch Friendly) -->
         <div x-show="detailModalOpen" 
              @click.self="detailModalOpen = false" 
-             class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto" 
+             class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto" 
              x-cloak>
-            <div class="bg-white rounded-2xl max-w-sm sm:max-w-md w-full p-4 sm:p-6 border border-stone-200 shadow-xl max-h-[90vh] overflow-y-auto"
+            <div class="bg-white rounded-2xl max-w-sm sm:max-w-md w-full p-4 sm:p-6 border border-stone-200 shadow-xl max-h-[90vh] overflow-y-auto relative"
                  @click.stop>
                 
                 <div class="flex items-center justify-between pb-3 border-b border-stone-100">
@@ -226,7 +264,7 @@
                         <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wide">Rincian Struk Transaksi</h3>
                         <span class="text-xs text-emerald-700 font-mono font-bold" x-text="selectedOrder?.order_number"></span>
                     </div>
-                    <button type="button" @click="detailModalOpen = false" class="text-stone-400 hover:text-stone-700 font-bold p-1 text-sm">✕</button>
+                    <button type="button" @click="detailModalOpen = false" class="text-stone-400 hover:text-stone-700 p-2 text-base font-bold rounded-lg hover:bg-stone-100 active:scale-95 transition">✕</button>
                 </div>
 
                 <div class="mt-3.5 space-y-2.5 text-xs">
@@ -300,18 +338,18 @@
 
                 <!-- Strip Status Printer Thermal -->
                 <div class="p-2.5 bg-stone-50 rounded-xl border border-stone-200/80 flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <span class="text-[11px] text-stone-600 font-medium">Printer: <strong class="text-emerald-700 font-mono" x-text="window.thermalPrinter?.useRawBt ? 'RawBT (Android)' : (window.thermalPrinter?.isConnected ? (window.thermalPrinter.printerName || '58mm Terhubung') : 'Siap Cetak 58mm')"></strong></span>
+                    <span class="text-[11px] text-stone-600 font-medium">Printer: <strong class="text-emerald-700 font-mono" x-text="useRawBt ? 'RawBT (Android)' : (window.thermalPrinter?.isConnected ? (window.thermalPrinter.printerName || '58mm Terhubung') : 'Siap Cetak 58mm')"></strong></span>
                     <div class="flex items-center gap-1.5">
                         <button type="button" 
-                                @click="window.thermalPrinter && window.thermalPrinter.toggleRawBt(); $forceUpdate()" 
-                                class="text-[10px] font-bold px-2 py-1 rounded-lg border transition"
-                                :class="window.thermalPrinter?.useRawBt ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'"
+                                @click="toggleRawBtMode()" 
+                                class="text-[10px] font-bold px-2 py-1 rounded-lg border transition active:scale-95"
+                                :class="useRawBt ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'"
                                 title="Gunakan aplikasi RawBT Android untuk printer Bluetooth">
-                            <span x-text="window.thermalPrinter?.useRawBt ? '✓ RawBT Aktif' : 'Mode RawBT'"></span>
+                            <span x-text="useRawBt ? '✓ RawBT Aktif' : 'Mode RawBT'"></span>
                         </button>
                         <button type="button" 
                                 @click="window.thermalPrinter && window.thermalPrinter.connectBluetooth()" 
-                                class="text-[10px] font-bold text-emerald-800 bg-white px-2 py-1 rounded-lg border border-stone-200 hover:bg-emerald-50">
+                                class="text-[10px] font-bold text-emerald-800 bg-white px-2 py-1 rounded-lg border border-stone-200 hover:bg-emerald-50 active:scale-95">
                             Pairing BLE
                         </button>
                     </div>
@@ -321,12 +359,12 @@
                 <div class="mt-4 flex gap-2">
                     <button type="button" 
                             @click="detailModalOpen = false" 
-                            class="flex-1 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold text-xs transition">
+                            class="flex-1 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 active:bg-stone-300 text-stone-700 font-semibold text-xs transition active:scale-95">
                         Tutup
                     </button>
                     <button type="button" 
                             @click="printCurrentReceipt()" 
-                            class="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs active:scale-95">
+                            class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs active:scale-95">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                         </svg>

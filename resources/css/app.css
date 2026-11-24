@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+[x-cloak] {
+    display: none !important;
+}
+
 :root {
     --brand-maroon: #1E293B;
     --brand-maroon-hover: #334155;
