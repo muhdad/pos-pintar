@@ -2,18 +2,29 @@
     @section('page_title', 'Riwayat Transaksi')
 
     <div x-data="{
+        ordersList: {{ Js::from($orders->items()) }},
         detailModalOpen: false,
         selectedOrder: null,
-        openDetail(order) {
-            this.selectedOrder = order;
+
+        openDetail(orderId) {
+            this.selectedOrder = this.ordersList.find(o => String(o.id) === String(orderId)) || null;
             this.detailModalOpen = true;
+        },
+
+        printCurrentReceipt() {
+            if (!this.selectedOrder) return;
+            if (window.thermalPrinter && window.thermalPrinter.isConnected) {
+                window.thermalPrinter.printReceipt(this.selectedOrder);
+            } else {
+                window.print();
+            }
         }
     }" class="space-y-5">
         <!-- Page Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200/80">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-stone-200/80">
             <div>
-                <h1 class="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">Riwayat Transaksi & Struk</h1>
-                <p class="text-xs text-slate-500 mt-0.5">Daftar rekonsiliasi seluruh transaksi kasir online dan offline yang telah tersinkronisasi.</p>
+                <h1 class="text-lg sm:text-xl font-bold text-stone-800 tracking-tight">Riwayat Transaksi & Struk</h1>
+                <p class="text-xs text-stone-500 mt-0.5">Daftar rekonsiliasi seluruh transaksi kasir online dan offline yang telah tersinkronisasi.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
                 <!-- Export Excel Button -->
@@ -27,7 +38,7 @@
 
                 <!-- Export CSV Button -->
                 <a href="{{ route('backoffice.orders.export-csv', request()->query()) }}" 
-                   class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition">
+                   class="px-3.5 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium text-xs transition">
                     <span>CSV</span>
                 </a>
 
@@ -40,12 +51,68 @@
             </div>
         </div>
 
-        <!-- Orders Table Card -->
-        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+        <!-- Orders View for Tablet & Mobile (Card Layout - Touch Friendly) -->
+        <div class="block md:hidden space-y-3">
+            @forelse ($orders as $order)
+                <div class="bg-white rounded-2xl border border-stone-200/80 p-4 shadow-xs space-y-2.5 active:bg-stone-50 transition"
+                     @click="openDetail('{{ $order->id }}')">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs">
+                                🧾
+                            </span>
+                            <div>
+                                <span class="font-bold text-xs text-stone-900 font-mono block">{{ $order->order_number }}</span>
+                                <span class="text-[10px] text-stone-500 font-mono">{{ $order->created_at->format('d/m/Y H:i') }}</span>
+                            </div>
+                        </div>
+                        <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold {{ $order->status === 'PAID' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200' }}">
+                            {{ $order->status === 'PAID' ? 'Lunas' : ($order->status === 'VOIDED' ? 'Batal' : $order->status) }}
+                        </span>
+                    </div>
+
+                    <!-- Items Preview -->
+                    <div class="text-[11px] text-stone-600 bg-stone-50 p-2.5 rounded-xl border border-stone-100 space-y-0.5">
+                        @foreach ($order->items as $it)
+                            <div class="flex justify-between items-center">
+                                <span class="truncate"><strong class="text-stone-800">{{ $it->quantity }}x</strong> {{ $it->product->name ?? 'Menu' }}</span>
+                                <span class="text-stone-500 font-mono tabular-nums shrink-0 ml-2">Rp{{ number_format($it->subtotal, 0, ',', '.') }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <div class="flex items-center justify-between pt-1">
+                        <div>
+                            <span class="text-[10px] text-stone-400 block">Total Tagihan</span>
+                            <span class="text-sm font-bold text-emerald-700 font-mono tabular-nums">
+                                Rp{{ number_format($order->final_amount, 0, ',', '.') }}
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-1 rounded-lg text-[10px] font-bold bg-stone-100 text-stone-700 border border-stone-200">
+                                {{ $order->payments->first()->method ?? 'CASH' }}
+                            </span>
+                            <button type="button" 
+                                    @click.stop="openDetail('{{ $order->id }}')"
+                                    class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-xs active:scale-95 transition">
+                                Buka Struk
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <div class="bg-white rounded-2xl border border-stone-200/80 p-8 text-center text-xs text-stone-400">
+                    Belum ada riwayat transaksi tersimpan.
+                </div>
+            @endforelse
+        </div>
+
+        <!-- Orders Table Card for Desktop & Tablet Landscape -->
+        <div class="hidden md:block bg-white rounded-2xl border border-stone-200/80 shadow-xs overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full min-w-[720px] text-left text-xs">
                     <thead>
-                        <tr class="text-slate-500 font-semibold border-b border-slate-200/80 bg-slate-50/70 text-[11px] sticky top-0 z-10">
+                        <tr class="text-stone-500 font-semibold border-b border-stone-200/80 bg-stone-50/70 text-[11px] sticky top-0 z-10">
                             <th class="py-2.5 px-4">No. Struk</th>
                             <th class="py-2.5 px-3">Waktu</th>
                             <th class="py-2.5 px-3">Kasir</th>
@@ -58,7 +125,8 @@
                     </thead>
                     <tbody class="divide-y divide-stone-100">
                         @forelse ($orders as $order)
-                            <tr class="hover:bg-stone-50/70 transition">
+                            <tr class="hover:bg-emerald-50/40 transition cursor-pointer"
+                                @click="openDetail('{{ $order->id }}')">
                                 <td class="py-3 px-4 font-bold text-stone-900 font-mono tabular-nums">
                                     {{ $order->order_number }}
                                 </td>
@@ -91,12 +159,12 @@
                                 <td class="py-3 px-3 text-right font-mono tabular-nums font-bold text-stone-900">
                                     Rp{{ number_format($order->final_amount, 0, ',', '.') }}
                                 </td>
-                                <td class="py-3 px-4 text-right">
+                                <td class="py-3 px-4 text-right" @click.stop>
                                     <div class="flex items-center justify-end gap-1.5">
                                         <button type="button" 
-                                                @click="openDetail({{ json_encode($order) }})"
-                                                class="px-2 py-1 rounded-[4px] bg-stone-50 hover:bg-stone-100 text-stone-700 border border-stone-200 text-xs font-semibold transition">
-                                            Detail
+                                                @click="openDetail('{{ $order->id }}')"
+                                                class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold transition">
+                                            Buka Struk
                                         </button>
                                         <form action="{{ route('backoffice.orders.destroy', $order) }}" 
                                               method="POST" 
@@ -105,7 +173,7 @@
                                             @method('DELETE')
                                             <button type="submit" 
                                                     title="Hapus Transaksi Testing"
-                                                    class="p-1 rounded-[4px] bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition">
+                                                    class="p-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition">
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                 </svg>
@@ -133,107 +201,103 @@
             @endif
         </div>
 
-        <!-- Detail Struk Modal -->
+        <!-- Detail Struk Modal (Ringan, Tanpa Backdrop-Blur Berat, Touch Friendly) -->
         <div x-show="detailModalOpen" 
-             class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs" 
+             class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto" 
              x-cloak>
-            <div class="bg-white rounded-2xl max-w-sm w-full p-4 sm:p-6 border border-slate-200 shadow-xl max-h-[90vh] overflow-y-auto animate-in fade-in duration-150"
+            <div class="bg-white rounded-2xl max-w-sm sm:max-w-md w-full p-4 sm:p-6 border border-stone-200 shadow-xl max-h-[90vh] overflow-y-auto animate-in fade-in duration-100"
                  @click.outside="detailModalOpen = false">
                 
-                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-center justify-between pb-3 border-b border-stone-100">
                     <div>
-                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wide">Rincian Struk Transaksi</h3>
-                        <span class="text-[10px] text-slate-500 font-mono font-semibold" x-text="selectedOrder?.order_number"></span>
+                        <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wide">Rincian Struk Transaksi</h3>
+                        <span class="text-xs text-emerald-700 font-mono font-bold" x-text="selectedOrder?.order_number"></span>
                     </div>
-                    <button type="button" @click="detailModalOpen = false" class="text-slate-400 hover:text-slate-700 font-bold p-1">✕</button>
+                    <button type="button" @click="detailModalOpen = false" class="text-stone-400 hover:text-stone-700 font-bold p-1 text-sm">✕</button>
                 </div>
 
                 <div class="mt-3.5 space-y-2.5 text-xs">
-                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
-                        <div class="flex justify-between text-slate-500">
+                    <div class="p-3 rounded-xl bg-stone-50 border border-stone-200/80 space-y-1">
+                        <div class="flex justify-between text-stone-500">
                             <span>Status:</span>
-                            <span class="font-bold text-emerald-700">Lunas</span>
+                            <span class="font-bold text-emerald-700" x-text="selectedOrder?.status === 'PAID' ? 'LUNAS' : selectedOrder?.status"></span>
                         </div>
-                        <div class="flex justify-between text-slate-500">
+                        <div class="flex justify-between text-stone-500">
                             <span>Kasir:</span>
-                            <span class="font-medium text-slate-800" x-text="selectedOrder?.user?.name || 'Kasir SLL'"></span>
+                            <span class="font-medium text-stone-800" x-text="selectedOrder?.user?.name || 'Kasir SLL'"></span>
                         </div>
-                        <div class="flex justify-between text-slate-500">
+                        <div class="flex justify-between text-stone-500">
                             <span>Pelanggan:</span>
-                            <span class="font-medium text-slate-800" x-text="selectedOrder?.customer_name || 'Umum / Dine-in'"></span>
+                            <span class="font-medium text-stone-800" x-text="selectedOrder?.customer_name || 'Umum / Dine-in'"></span>
+                        </div>
+                        <div class="flex justify-between text-stone-500">
+                            <span>Waktu Transaksi:</span>
+                            <span class="font-mono text-stone-700" x-text="selectedOrder?.created_at ? new Date(selectedOrder.created_at).toLocaleString('id-ID') : '-'"></span>
                         </div>
                     </div>
 
                     <!-- Items List -->
-                    <div class="space-y-1.5 border-t border-b border-slate-100 py-2.5">
-                        <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">Daftar Item:</span>
+                    <div class="space-y-1.5 border-t border-b border-stone-100 py-2.5">
+                        <span class="text-[10px] font-semibold uppercase tracking-wider text-stone-400 block">Daftar Item:</span>
                         <template x-for="item in (selectedOrder?.items || [])" :key="item.id">
-                            <div class="flex justify-between items-start text-xs">
+                            <div class="flex justify-between items-start text-xs py-0.5">
                                 <div>
-                                    <span class="font-bold text-slate-800" x-text="item.quantity + 'x ' + (item.product?.name || 'Menu')"></span>
-                                    <span class="text-[10px] text-slate-400 font-mono tabular-nums block" x-text="'@Rp' + Number(item.unit_price).toLocaleString('id-ID')"></span>
+                                    <span class="font-bold text-stone-800" x-text="item.quantity + 'x ' + (item.product?.name || 'Menu')"></span>
+                                    <span class="text-[10px] text-stone-400 font-mono tabular-nums block" x-text="'@Rp' + Number(item.unit_price).toLocaleString('id-ID')"></span>
                                 </div>
-                                <span class="font-bold text-slate-800 font-mono tabular-nums" x-text="'Rp' + Number(item.subtotal).toLocaleString('id-ID')"></span>
+                                <span class="font-bold text-stone-800 font-mono tabular-nums" x-text="'Rp' + Number(item.subtotal).toLocaleString('id-ID')"></span>
                             </div>
                         </template>
                     </div>
 
                     <!-- Total Breakdown -->
                     <div class="space-y-1 pt-0.5">
-                        <div class="flex justify-between text-slate-500">
+                        <div class="flex justify-between text-stone-500">
                             <span>Subtotal:</span>
-                            <span class="font-mono tabular-nums text-slate-800" x-text="'Rp' + Number(selectedOrder?.total_amount || 0).toLocaleString('id-ID')"></span>
+                            <span class="font-mono tabular-nums text-stone-800" x-text="'Rp' + Number(selectedOrder?.total_amount || 0).toLocaleString('id-ID')"></span>
                         </div>
-                        <div class="flex justify-between text-slate-500" x-show="Number(selectedOrder?.tax_amount || 0) > 0">
+                        <div class="flex justify-between text-stone-500" x-show="Number(selectedOrder?.discount_amount || 0) > 0">
+                            <span>Diskon:</span>
+                            <span class="font-mono tabular-nums text-rose-600" x-text="'-Rp' + Number(selectedOrder?.discount_amount || 0).toLocaleString('id-ID')"></span>
+                        </div>
+                        <div class="flex justify-between text-stone-500" x-show="Number(selectedOrder?.tax_amount || 0) > 0">
                             <span>Pajak:</span>
-                            <span class="font-mono tabular-nums text-slate-800" x-text="'Rp' + Number(selectedOrder?.tax_amount || 0).toLocaleString('id-ID')"></span>
+                            <span class="font-mono tabular-nums text-stone-800" x-text="'Rp' + Number(selectedOrder?.tax_amount || 0).toLocaleString('id-ID')"></span>
                         </div>
-                        <div class="flex justify-between text-xs font-bold text-slate-900 pt-1.5 border-t border-slate-200">
+                        <div class="flex justify-between text-xs font-bold text-stone-900 pt-1.5 border-t border-stone-200">
                             <span>Total Bayar:</span>
-                            <span class="text-emerald-700 font-mono tabular-nums font-bold" x-text="'Rp' + Number(selectedOrder?.final_amount || 0).toLocaleString('id-ID')"></span>
+                            <span class="text-emerald-700 font-mono tabular-nums font-bold text-sm" x-text="'Rp' + Number(selectedOrder?.final_amount || 0).toLocaleString('id-ID')"></span>
                         </div>
                     </div>
                 </div>
 
+                <!-- Void Order Form jika diperlukan -->
                 <template x-if="selectedOrder && selectedOrder.status !== 'VOIDED'">
                     <form :action="'/backoffice/orders/' + selectedOrder.id + '/void'" 
                           method="POST" 
                           onsubmit="return confirm('Apakah Anda yakin ingin membatalkan transaksi ini (VOID)? Stok bahan baku akan otomatis dikembalikan ke gudang.')" 
                           class="mt-2.5 pt-2 border-t border-stone-100 flex items-center gap-1.5">
                         @csrf
-                        <input type="text" name="reason" required placeholder="Alasan void (misal: salah input kasir)" class="flex-1 text-[11px] bg-stone-50 border border-stone-200 rounded-[4px] px-2 py-1 text-stone-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500">
-                        <button type="submit" class="px-2.5 py-1 rounded-[4px] bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition shrink-0">
-                            Void Pesanan
+                        <input type="text" name="reason" required placeholder="Alasan void (misal: salah input kasir)" class="flex-1 text-[11px] bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5 text-stone-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                        <button type="submit" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition shrink-0">
+                            Void
                         </button>
                     </form>
                 </template>
 
-                <template x-if="selectedOrder">
-                    <form :action="'/backoffice/orders/' + selectedOrder.id" 
-                          method="POST" 
-                          onsubmit="return confirm('Hapus permanen transaksi testing ini? Seluruh data transaksi ini akan dibersihkan, stok bahan baku dikembalikan, dan tidak akan mempengaruhi cashflow.')" 
-                          class="mt-2 flex items-center justify-between bg-red-50/60 p-2 rounded-[6px] border border-red-200">
-                        @csrf
-                        <input type="hidden" name="_method" value="DELETE">
-                        <span class="text-[10px] text-red-700 font-medium">Hapus permanen transaksi testing:</span>
-                        <button type="submit" class="px-2 py-1 rounded-[4px] bg-red-600 hover:bg-red-700 text-white font-bold text-[11px] transition shrink-0 flex items-center gap-1">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            <span>Hapus Transaksi</span>
-                        </button>
-                    </form>
-                </template>
-
+                <!-- Action Buttons: Print Struk & Tutup -->
                 <div class="mt-4 flex gap-2">
                     <button type="button" 
                             @click="detailModalOpen = false" 
-                            class="flex-1 py-1.5 rounded-[6px] bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium text-xs transition">
+                            class="flex-1 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold text-xs transition">
                         Tutup
                     </button>
                     <button type="button" 
-                            @click="window.print()" 
-                            class="flex-1 py-1.5 rounded-[6px] bg-[#EA580C] hover:bg-[#D94E07] text-white font-bold text-xs transition flex items-center justify-center gap-1.5">
+                            @click="printCurrentReceipt()" 
+                            class="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs active:scale-95">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                        </svg>
                         <span>Cetak Struk (58mm)</span>
                     </button>
                 </div>
@@ -244,7 +308,7 @@
         <div id="printable-receipt" class="hidden text-black font-mono text-[11px] leading-tight select-none">
             <div class="text-center pb-2 border-b border-dashed border-black">
                 <h2 class="text-xs font-bold tracking-wider uppercase">SOTO LAMONGAN LESTARI</h2>
-                <p class="text-[10px] mt-0.5">{{ $outlet->name ?? 'Cabang Utama' }}</p>
+                <p class="text-[10px] mt-0.5">Cabang Utama</p>
                 <p class="text-[10px]">Telp: 0852-1325-4219</p>
             </div>
 
@@ -258,10 +322,8 @@
                     <span class="font-bold uppercase" x-text="selectedOrder?.status"></span>
                 </div>
                 <div class="flex justify-between" x-show="selectedOrder?.customer_name">
-                    <span>Plg: <span x-text="selectedOrder?.customer_name"></span></span>
-                </div>
-                <div class="flex justify-between" x-show="selectedOrder?.user?.name">
-                    <span>Kasir: <span x-text="selectedOrder?.user?.name"></span></span>
+                    <span>Pelanggan:</span>
+                    <span x-text="selectedOrder?.customer_name"></span>
                 </div>
             </div>
 
@@ -269,55 +331,32 @@
             <div class="py-1.5 border-b border-dashed border-black space-y-1">
                 <template x-for="item in (selectedOrder?.items || [])" :key="item.id">
                     <div>
-                        <div class="font-bold text-[11px]" x-text="item.product?.name || item.name"></div>
+                        <div class="font-bold" x-text="item.product?.name || 'Menu'"></div>
                         <div class="flex justify-between text-[10px]">
-                            <span x-text="`${item.quantity} x ${Number(item.unit_price).toLocaleString('id-ID')}`"></span>
-                            <span class="font-bold" x-text="Number(item.subtotal).toLocaleString('id-ID')"></span>
+                            <span>
+                                <span x-text="item.quantity"></span> x <span x-text="Number(item.unit_price).toLocaleString('id-ID')"></span>
+                            </span>
+                            <span x-text="Number(item.subtotal).toLocaleString('id-ID')"></span>
                         </div>
-                        <template x-if="item.notes">
-                            <div class="text-[9px] italic" x-text="`* ${item.notes}`"></div>
-                        </template>
                     </div>
                 </template>
             </div>
 
-            <!-- Totals -->
-            <div class="py-1.5 border-b border-dashed border-black text-[10px] space-y-0.5">
+            <!-- Total -->
+            <div class="py-1.5 border-b border-dashed border-black space-y-0.5 text-[10px]">
                 <div class="flex justify-between">
-                    <span>Subtotal</span>
+                    <span>Subtotal:</span>
                     <span x-text="Number(selectedOrder?.total_amount || 0).toLocaleString('id-ID')"></span>
                 </div>
-                <div class="flex justify-between" x-show="selectedOrder?.discount_amount > 0">
-                    <span>Diskon</span>
-                    <span x-text="`-${Number(selectedOrder?.discount_amount || 0).toLocaleString('id-ID')}`"></span>
-                </div>
-                <div class="flex justify-between" x-show="Number(selectedOrder?.tax_amount || 0) > 0">
-                    <span>Pajak</span>
-                    <span x-text="Number(selectedOrder?.tax_amount || 0).toLocaleString('id-ID')"></span>
-                </div>
-                <div class="flex justify-between font-bold text-xs pt-1 border-t border-dotted border-black">
-                    <span>TOTAL</span>
-                    <span x-text="`Rp${Number(selectedOrder?.final_amount || 0).toLocaleString('id-ID')}`"></span>
+                <div class="flex justify-between font-bold text-xs pt-1">
+                    <span>TOTAL:</span>
+                    <span>Rp<span x-text="Number(selectedOrder?.final_amount || 0).toLocaleString('id-ID')"></span></span>
                 </div>
             </div>
 
-            <!-- Payment info -->
-            <div class="py-1.5 border-b border-dashed border-black text-[10px] space-y-0.5">
-                <div class="flex justify-between">
-                    <span>Metode</span>
-                    <span class="font-bold uppercase" x-text="(selectedOrder?.payments && selectedOrder.payments[0]) ? selectedOrder.payments[0].method : 'CASH'"></span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Status</span>
-                    <span class="font-bold text-black">LUNAS</span>
-                </div>
-            </div>
-
-            <!-- Footer -->
-            <div class="text-center pt-2 text-[10px] space-y-0.5">
-                <p class="font-bold">Rasa Mantap, Harga Bersahabat</p>
+            <div class="text-center pt-2 text-[10px]">
                 <p>Terima Kasih Atas Kunjungan Anda!</p>
-                <p class="text-[8px] text-gray-500 pt-1">SLL Smart POS Cloud</p>
+                <p>Rasa Mantap, Harga Bersahabat</p>
             </div>
         </div>
     </div>

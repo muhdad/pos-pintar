@@ -88,6 +88,13 @@ export function posTerminal() {
         currentDynamicQrisString: '',
         qrisFullScreenModalOpen: false,
 
+        // Auto-Print Struk Otomatis (Tanpa klik berulang)
+        autoPrintReceipt: localStorage.getItem('POS_AUTO_PRINT') !== 'false',
+        toggleAutoPrint() {
+            this.autoPrintReceipt = !this.autoPrintReceipt;
+            localStorage.setItem('POS_AUTO_PRINT', this.autoPrintReceipt ? 'true' : 'false');
+        },
+
         // Shift Kasir
         activeShift: null,
         startCash: 0,
@@ -143,29 +150,35 @@ export function posTerminal() {
                 this.isOnline = false;
             });
 
-            // Inisialisasi katalog
+            // Inisialisasi katalog instan tanpa blocking main thread
             if (window.POS_INITIAL_PRODUCTS !== undefined) {
                 this.products = window.POS_INITIAL_PRODUCTS || [];
                 this.categories = window.POS_INITIAL_CATEGORIES || [];
-                try {
-                    await posDb.products.clear();
-                    if (this.products.length > 0) {
-                        await posDb.products.bulkPut(JSON.parse(JSON.stringify(this.products)));
+
+                // Simpan cache ke IndexedDB secara asynchronous di background agar tablet tidak lag
+                setTimeout(async () => {
+                    try {
+                        await posDb.products.clear();
+                        if (this.products.length > 0) {
+                            await posDb.products.bulkPut(JSON.parse(JSON.stringify(this.products)));
+                        }
+                        if (this.categories.length > 0) {
+                            await posDb.categories.clear();
+                            await posDb.categories.bulkPut(JSON.parse(JSON.stringify(this.categories)));
+                        }
+                    } catch (e) {
+                        console.warn('Gagal sinkronisasi cache ke IndexedDB:', e);
                     }
-                    if (this.categories.length > 0) {
-                        await posDb.categories.clear();
-                        await posDb.categories.bulkPut(JSON.parse(JSON.stringify(this.categories)));
-                    }
-                } catch (e) {
-                    console.warn('Gagal sinkronisasi cache ke IndexedDB:', e);
-                }
+                }, 100);
             } else {
                 await this.loadLocalCatalog();
             }
 
             if (this.isOnline) {
-                await this.refreshCatalogFromCloud();
-                await this.syncOfflineQueue();
+                // Sinkron antrian offline tanpa memblokir rendering UI
+                setTimeout(() => {
+                    this.syncOfflineQueue();
+                }, 200);
             }
 
             // Sync otomatis background
@@ -276,7 +289,17 @@ export function posTerminal() {
             });
         },
 
-        // Cek ketersediaan stok
+        // Map stok instan O(1) untuk optimasi kecepatan render di tablet
+        get stockMap() {
+            const map = {};
+            const list = this.stocks || [];
+            for (let i = 0; i < list.length; i++) {
+                map[list[i].raw_material_id] = Number(list[i].current_stock) || 0;
+            }
+            return map;
+        },
+
+        // Cek ketersediaan stok super cepat O(1)
         isProductOutOfStock(product) {
             // Jika produk dinonaktifkan dari backoffice
             if (product.is_active === false) return true;
@@ -290,11 +313,12 @@ export function posTerminal() {
             }
 
             // Jika produk memiliki resep bahan baku (BOM) & gudang memiliki data stok
-            if (product.recipes && product.recipes.length > 0 && this.stocks && this.stocks.length > 0) {
-                for (const recipe of product.recipes) {
-                    const st = this.stocks.find(s => s.raw_material_id === recipe.raw_material_id);
-                    // Jika bahan baku terdaftar di resep dan stoknya habis / kurang dari takaran
-                    if (st && Number(st.current_stock) < Number(recipe.quantity)) {
+            if (product.recipes && product.recipes.length > 0) {
+                const map = this.stockMap;
+                for (let i = 0; i < product.recipes.length; i++) {
+                    const recipe = product.recipes[i];
+                    const current = map[recipe.raw_material_id];
+                    if (current !== undefined && current < Number(recipe.quantity)) {
                         return true;
                     }
                 }
@@ -307,12 +331,14 @@ export function posTerminal() {
         // Alasan stok habis untuk info kasir
         getOutOfStockReason(product) {
             if (product.is_active === false) return 'Menu sedang dinonaktifkan di Backoffice';
-            if (product.recipes && product.recipes.length > 0 && this.stocks && this.stocks.length > 0) {
-                for (const recipe of product.recipes) {
-                    const st = this.stocks.find(s => s.raw_material_id === recipe.raw_material_id);
-                    if (st && Number(st.current_stock) < Number(recipe.quantity)) {
-                        const matName = recipe.raw_material?.name || st.name || 'Bahan Baku';
-                        return `Stok [${matName}] di gudang habis (sisa: ${Number(st.current_stock)})`;
+            if (product.recipes && product.recipes.length > 0) {
+                const map = this.stockMap;
+                for (let i = 0; i < product.recipes.length; i++) {
+                    const recipe = product.recipes[i];
+                    const current = map[recipe.raw_material_id];
+                    if (current !== undefined && current < Number(recipe.quantity)) {
+                        const matName = recipe.raw_material?.name || 'Bahan Baku';
+                        return `Stok [${matName}] di gudang habis (sisa: ${current})`;
                     }
                 }
             }
@@ -803,9 +829,11 @@ export function posTerminal() {
                     cashGiven: this.selectedPaymentMethod === 'CASH' ? this.cashGiven : this.totalMultiPaid
                 }));
 
-                // Otomatis cetak struk via bluetooth jika printer siap
-                if (window.thermalPrinter?.isConnected) {
-                    window.thermalPrinter.printReceipt(this.completedOrder);
+                // Otomatis cetak struk kasir jika opsi Auto-Print aktif
+                if (this.autoPrintReceipt && window.thermalPrinter) {
+                    setTimeout(() => {
+                        window.thermalPrinter.printReceipt(this.completedOrder);
+                    }, 50);
                 }
 
                 // Broadcast ke Customer Display bahwa pembayaran sukses

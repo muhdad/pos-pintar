@@ -116,16 +116,62 @@
                     <span class="hidden sm:inline" x-text="isOnline ? (isSyncing ? 'Sinkron...' : 'Online') : 'Offline'"></span>
                 </div>
 
-                <!-- Bluetooth Printer Button -->
-                <button type="button" 
-                        onclick="window.thermalPrinter && window.thermalPrinter.connectBluetooth()" 
-                        class="p-2 sm:px-2.5 sm:py-1.5 text-xs font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl flex items-center gap-1.5 transition active:translate-y-px shrink-0"
-                        title="Hubungkan Printer Thermal Bluetooth">
-                    <svg class="w-3.5 h-3.5 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                    </svg>
-                    <span class="hidden lg:inline">Printer Thermal</span>
-                </button>
+                <!-- Bluetooth & USB Thermal Printer Direct Connect -->
+                <div x-data="{ printerMenuOpen: false }" class="relative">
+                    <button type="button" 
+                            @click="printerMenuOpen = !printerMenuOpen"
+                            class="p-2 sm:px-2.5 sm:py-1.5 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition active:translate-y-px shrink-0 border"
+                            :class="window.thermalPrinter?.isConnected ? 'bg-emerald-500/20 border-emerald-400/60 text-emerald-200' : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'"
+                            title="Pengaturan Auto-Print & Koneksi Printer">
+                        <svg class="w-3.5 h-3.5" :class="window.thermalPrinter?.isConnected ? 'text-emerald-400' : 'text-amber-300'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                        </svg>
+                        <span class="hidden lg:inline" x-text="window.thermalPrinter?.isConnected ? (window.thermalPrinter.printerName || 'Printer Siap') : 'Printer Thermal'"></span>
+                    </button>
+
+                    <!-- Popover Dropdown -->
+                    <div x-show="printerMenuOpen" 
+                         @click.outside="printerMenuOpen = false" 
+                         x-cloak 
+                         class="absolute right-0 mt-2 w-72 bg-white text-slate-800 rounded-2xl shadow-xl border border-slate-200 p-3.5 z-50 text-xs space-y-2.5">
+                        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                            <span class="font-bold text-slate-800">Printer Thermal Kasir</span>
+                            <span class="text-[10px] px-2 py-0.5 rounded font-mono font-bold" 
+                                  :class="window.thermalPrinter?.isConnected ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'"
+                                  x-text="window.thermalPrinter?.isConnected ? 'TERHUBUNG' : 'BELUM TERHUBUNG'"></span>
+                        </div>
+
+                        <p class="text-[11px] text-slate-500">
+                            Cetak struk 58mm / 80mm langsung keluar kertas <strong>tanpa muncul jendela settingan browser</strong>.
+                        </p>
+
+                        <div class="space-y-1.5">
+                            <button type="button" 
+                                    @click="window.thermalPrinter && window.thermalPrinter.connectBluetooth(); printerMenuOpen = false" 
+                                    class="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs flex items-center justify-center gap-2 transition active:scale-95">
+                                <span>📶</span>
+                                <span>Hubungkan Bluetooth (Wireless)</span>
+                            </button>
+
+                            <button type="button" 
+                                    @click="window.thermalPrinter && window.thermalPrinter.connectUsb(); printerMenuOpen = false" 
+                                    class="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs flex items-center justify-center gap-2 transition active:scale-95">
+                                <span>🔌</span>
+                                <span>Hubungkan Kabel USB (OTG)</span>
+                            </button>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-100 space-y-1.5">
+                            <label class="flex items-center gap-2 cursor-pointer select-none">
+                                <input type="checkbox" :checked="autoPrintReceipt" @change="toggleAutoPrint()" class="rounded text-emerald-600 focus:ring-emerald-400 w-4 h-4">
+                                <span class="text-[11px] font-bold text-slate-700">Auto-Print Saat Bayar Lunas</span>
+                            </label>
+                            <span class="text-[10px] text-slate-400 block">
+                                💡 Tip Chrome Silent Print: Jalankan Chrome dengan parameter <code class="bg-slate-100 px-1 rounded font-mono text-slate-700">--kiosk-printing</code> untuk mencetak instan tanpa dialog browser.
+                            </span>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Backoffice Link -->
                 <a href="{{ route('dashboard') }}" class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-xs flex items-center gap-1 shrink-0">
@@ -443,7 +489,7 @@
         <div x-show="mobileCartOpen" 
              class="lg:hidden fixed inset-0 z-50 flex flex-col justify-end"
              x-cloak>
-            <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"
+            <div class="fixed inset-0 bg-slate-900/60 transition-opacity"
                  @click="mobileCartOpen = false"></div>
 
             <div class="relative bg-white rounded-t-3xl max-h-[88vh] flex flex-col w-full border-t border-slate-200 shadow-2xl z-10 animate-in slide-in-from-bottom duration-200"
@@ -594,7 +640,7 @@
 
         <!-- 6. Payment Modal (Tunai, QRIS, Transfer, Multi-Payment Split Bill) -->
         <div x-show="paymentModalOpen" 
-             class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
+             class="fixed inset-0 bg-slate-900/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
              x-cloak>
             <div class="bg-white text-slate-800 rounded-t-3xl sm:rounded-3xl max-w-sm sm:max-w-md w-full border border-slate-200/90 shadow-xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in duration-150" 
                  @click.outside="paymentModalOpen = false">
@@ -817,7 +863,7 @@
 
         <!-- Fullscreen QRIS Modal khusus Tablet Kasir (Sodorkan ke Pembeli) -->
         <div x-show="qrisFullScreenModalOpen" 
-             class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in"
+             class="fixed inset-0 bg-slate-900/75 z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in"
              x-cloak>
             <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-sm sm:max-w-md w-full p-5 sm:p-6 text-center space-y-4 my-auto"
                  @click.outside="qrisFullScreenModalOpen = false">
@@ -881,7 +927,7 @@
 
         <!-- 7. Success Modal -->
         <div x-show="successModalOpen"
-             class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+             class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
              x-cloak>
             <div class="bg-white text-slate-800 rounded-3xl max-w-sm sm:max-w-md w-full border border-slate-200/90 shadow-xl my-auto max-h-[92vh] flex flex-col overflow-hidden p-5 text-center animate-in fade-in duration-150"
                  @click.outside="successModalOpen = false">
@@ -914,6 +960,20 @@
                     </template>
                 </div>
 
+                <!-- Auto-Print Toggle Checkbox -->
+                <div class="p-2.5 bg-emerald-50/70 rounded-2xl border border-emerald-200/80 mb-3 text-left">
+                    <label class="flex items-center gap-2.5 cursor-pointer select-none">
+                        <input type="checkbox" 
+                               :checked="autoPrintReceipt" 
+                               @change="toggleAutoPrint()" 
+                               class="rounded-md text-emerald-600 focus:ring-emerald-400 w-4 h-4">
+                        <div>
+                            <span class="text-xs font-bold text-slate-800 block">Auto-Print Struk Tiap Transaksi</span>
+                            <span class="text-[10px] text-slate-500">Struk otomatis tercetak saat pembayaran selesai tanpa klik tombol.</span>
+                        </div>
+                    </label>
+                </div>
+
                 <div class="space-y-2 shrink-0">
                     <button type="button"
                             @click="window.thermalPrinter && window.thermalPrinter.printReceipt(completedOrder)"
@@ -941,7 +1001,7 @@
 
         <!-- 8. Open Bills Modal (Daftar Tagihan Gantung / Hold Orders) -->
         <div x-show="openBillsModalOpen" 
-             class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+             class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
              x-cloak>
             <div class="bg-white text-slate-800 rounded-3xl max-w-lg w-full border border-slate-200 shadow-xl my-auto max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in duration-150"
                  @click.outside="openBillsModalOpen = false">
@@ -995,7 +1055,7 @@
 
         <!-- 9. Buka Shift Kasir Modal -->
         <div x-show="startShiftModalOpen" 
-             class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+             class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
              x-cloak>
             <div class="bg-white rounded-3xl max-w-sm w-full p-5 border border-slate-200 shadow-xl animate-in fade-in duration-150"
                  @click.outside="startShiftModalOpen = false">
@@ -1033,7 +1093,7 @@
 
         <!-- 10. Kas Keluar / Petty Cash Modal -->
         <div x-show="pettyCashModalOpen" 
-             class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+             class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
              x-cloak>
             <div class="bg-white rounded-3xl max-w-sm w-full p-5 border border-slate-200 shadow-xl animate-in fade-in duration-150"
                  @click.outside="pettyCashModalOpen = false">
@@ -1071,7 +1131,7 @@
 
         <!-- 11. Tutup Shift Kasir (Blind Close Modal) -->
         <div x-show="closeShiftModalOpen" 
-             class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+             class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
              x-cloak>
             <div class="bg-white rounded-3xl max-w-sm w-full p-5 border border-slate-200 shadow-xl animate-in fade-in duration-150"
                  @click.outside="closeShiftModalOpen = false">
@@ -1112,7 +1172,7 @@
 
         <!-- 12. Ringkasan Tutup Shift (Shift Summary Report Modal) -->
         <div x-show="shiftSummaryModalOpen" 
-             class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+             class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
              x-cloak>
             <div class="bg-white rounded-3xl max-w-sm w-full p-5 border border-slate-200 shadow-xl animate-in fade-in duration-150 text-center"
                  @click.outside="shiftSummaryModalOpen = false">

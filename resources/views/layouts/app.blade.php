@@ -30,7 +30,7 @@
              x-transition:leave="transition-opacity ease-linear duration-150"
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0"
-             class="fixed inset-0 bg-slate-900/60 z-40 md:hidden backdrop-blur-xs"></div>
+             class="fixed inset-0 bg-slate-900/60 z-40 md:hidden"></div>
 
         <!-- Modern Soft Slate Sidebar Navigation -->
         <aside class="fixed md:sticky md:top-0 inset-y-0 left-0 z-50 w-64 md:h-screen bg-[#0F172A] text-slate-300 border-r border-slate-800 flex flex-col justify-between transition-transform duration-200 md:translate-x-0 shrink-0 select-none overflow-y-auto"
@@ -249,7 +249,7 @@
             </main>
 
             <!-- Mobile Quick Access Bottom Navigation Bar (< md) -->
-            <nav class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-2 py-1.5 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]"
+            <nav class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200/90 px-2 py-1.5 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]"
                  style="padding-bottom: max(0.375rem, env(safe-area-inset-bottom));">
                 <div class="grid grid-cols-5 gap-1 text-center items-center">
                     <!-- 1. Dashboard -->
