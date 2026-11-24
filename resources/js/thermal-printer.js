@@ -253,14 +253,117 @@ export class ThermalPrinter {
      * Cetak Tiket Dapur (KOT)
      */
     async printKitchenTicket(order) {
+        if (!order) return false;
+
+        // Prioritas 1: Mode RawBT (Android)
+        if (this.useRawBt || localStorage.getItem('POS_USE_RAWBT') === 'true') {
+            try {
+                const bytes = this.buildKotEscPosBytes(order);
+                const base64Data = this.uint8ToBase64(bytes);
+                window.location.href = `intent:base64,${base64Data}#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;`;
+                return true;
+            } catch (e) {
+                console.error('Gagal cetak KOT via RawBT:', e);
+            }
+        }
+
+        // Prioritas 2: Direct Web Bluetooth
+        if (this.isConnected && this.connectionType === 'bluetooth' && this.characteristic) {
+            try {
+                const data = this.buildKotEscPosBytes(order);
+                const CHUNK_SIZE = 512;
+                for (let i = 0; i < data.length; i += CHUNK_SIZE) {
+                    const chunk = data.slice(i, i + CHUNK_SIZE);
+                    if (this.characteristic.writeValueWithoutResponse) {
+                        await this.characteristic.writeValueWithoutResponse(chunk);
+                    } else {
+                        await this.characteristic.writeValue(chunk);
+                    }
+                }
+                return true;
+            } catch (e) {
+                console.error('Gagal cetak KOT via Bluetooth:', e);
+            }
+        }
+
+        // Prioritas 3: Direct WebUSB
+        if (this.isConnected && this.connectionType === 'usb' && this.usbDevice) {
+            try {
+                const data = this.buildKotEscPosBytes(order);
+                await this.usbDevice.transferOut(this.usbEndpoint, data);
+                return true;
+            } catch (e) {
+                console.error('Gagal cetak KOT via USB:', e);
+            }
+        }
+
+        // Prioritas 4: Fallback Browser Print dengan Isolasi CSS 58mm
         document.body.classList.add('print-kot');
+        const cleanup = () => {
+            document.body.classList.remove('print-kot');
+            window.removeEventListener('afterprint', cleanup);
+        };
+        window.addEventListener('afterprint', cleanup, { once: true });
+
         setTimeout(() => {
             window.print();
-            setTimeout(() => {
-                document.body.classList.remove('print-kot');
-            }, 600);
-        }, 100);
+            setTimeout(cleanup, 2500);
+        }, 80);
         return true;
+    }
+
+    /**
+     * Generate Binary ESC/POS Byte Buffer untuk Tiket Dapur (KOT)
+     */
+    buildKotEscPosBytes(order) {
+        const encoder = new TextEncoder();
+        const ESC = 0x1b;
+        const GS = 0x1d;
+        const maxCols = this.paperWidth === 80 ? 42 : 32;
+
+        let buffer = [];
+        buffer.push(ESC, 0x40); // Reset
+
+        // Header KOT
+        buffer.push(ESC, 0x61, 0x01); // Center
+        buffer.push(ESC, 0x45, 0x01); // Bold on
+        buffer.push(GS, 0x21, 0x11);  // Double size
+        buffer.push(...encoder.encode('TIKET DAPUR (KOT)\n'));
+        buffer.push(GS, 0x21, 0x00);  // Normal size
+        buffer.push(ESC, 0x45, 0x00); // Bold off
+
+        buffer.push(...encoder.encode('='.repeat(maxCols) + '\n'));
+        buffer.push(ESC, 0x61, 0x00); // Left
+
+        const now = order.created_at ? new Date(order.created_at) : new Date();
+        const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+        buffer.push(...encoder.encode(`TIPE  : ${(order.order_type || 'DINE_IN').toUpperCase()}\n`));
+        buffer.push(...encoder.encode(`MEJA  : ${order.table_name || order.customer_name || 'Dine-In'}\n`));
+        buffer.push(...encoder.encode(`WAKTU : ${timeStr}\n`));
+        buffer.push(...encoder.encode('-'.repeat(maxCols) + '\n'));
+
+        // Items List (Tanpa harga, qty tebal)
+        const items = order.items || [];
+        for (const item of items) {
+            const name = item.product?.name || item.name || 'Menu';
+            buffer.push(ESC, 0x45, 0x01);
+            buffer.push(...encoder.encode(`[ ] ${item.quantity}x ${name}\n`));
+            buffer.push(ESC, 0x45, 0x00);
+            if (item.notes) {
+                buffer.push(...encoder.encode(`    ➔ CATATAN: ${item.notes}\n`));
+            }
+        }
+
+        buffer.push(...encoder.encode('='.repeat(maxCols) + '\n'));
+        buffer.push(ESC, 0x61, 0x01); // Center
+        buffer.push(ESC, 0x45, 0x01);
+        buffer.push(...encoder.encode('*** SEGERA DISAJIKAN PANAS ***\n\n\n\n'));
+        buffer.push(ESC, 0x45, 0x00);
+
+        // Cut
+        buffer.push(GS, 0x56, 0x41, 0x10);
+        return new Uint8Array(buffer);
     }
 
     /**

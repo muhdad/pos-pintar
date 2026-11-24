@@ -231,7 +231,7 @@ button, a {
     border-color: #10B981;
 }
 
-/* Mode Print Struk Thermal 58mm */
+/* Mode Print Struk Thermal 58mm (dan 80mm Opsional) */
 .print-only {
     display: none;
 }
@@ -242,78 +242,173 @@ button, a {
 }
 
 @media print {
-    /* Sembunyikan seluruh elemen UI browser, sidebar, dan modal backdrop */
-    html, body {
+    /* 1. Reset Root & Body untuk Kertas Thermal 58mm */
+    html,
+    body {
         width: 58mm !important;
+        max-width: 58mm !important;
+        min-width: 58mm !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        overflow: visible !important;
+        position: static !important;
+        display: block !important;
+        font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important;
+        font-size: 10px !important;
+        font-weight: 600 !important;
+        line-height: 1.25 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* 2. Sembunyikan TOTAL seluruh UI aplikasi dengan display: none (Bukan visibility: hidden agar tidak memicu ghost height / 2 halaman) */
+    #pos-app-ui,
+    #backoffice-orders-ui,
+    header,
+    main,
+    aside,
+    nav,
+    footer,
+    form,
+    button,
+    input,
+    select,
+    .no-print,
+    .fixed,
+    [role="dialog"] {
+        display: none !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        width: 0 !important;
         margin: 0 !important;
         padding: 0 !important;
+        border: none !important;
+        overflow: hidden !important;
+        visibility: hidden !important;
+    }
+
+    /* Reset seluruh parent wrapper layout jika ada */
+    .h-screen,
+    .w-screen,
+    .h-full {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        width: auto !important;
+        overflow: visible !important;
+        position: static !important;
+        display: block !important;
+    }
+
+    /* Sembunyikan div wrapper saudara selain receipt & kot */
+    body > div:not(#printable-receipt):not(#printable-kot) {
+        display: none !important;
+        height: 0 !important;
+        width: 0 !important;
+        overflow: hidden !important;
+    }
+
+    /* 3. Kontainer Struk Kasir Pelanggan 58mm (Mode Normal: bukan KOT) */
+    body:not(.print-kot) #printable-receipt {
+        display: block !important;
+        visibility: visible !important;
+        position: static !important;
+        float: none !important;
+        width: 48mm !important;
+        max-width: 48mm !important;
+        min-width: 48mm !important;
+        margin: 0 auto !important;
+        padding: 0.5mm 1.5mm 3mm 1.5mm !important;
+        box-sizing: border-box !important;
         background: #ffffff !important;
         color: #000000 !important;
         font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important;
         font-size: 10px !important;
-        line-height: 1.2 !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+        font-weight: 600 !important;
+        line-height: 1.25 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+        overflow: visible !important;
     }
 
-    body * {
-        visibility: hidden !important;
-    }
-
-    .fixed, aside, header, nav, .no-print, [role="dialog"] {
-        display: none !important;
-    }
-
-    /* Tampilkan hanya wadah struk 58mm */
-    .print-only,
-    body:not(.print-kot) #printable-receipt,
     body:not(.print-kot) #printable-receipt * {
         visibility: visible !important;
-    }
-
-    body:not(.print-kot) #printable-receipt {
-        display: block !important;
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 48mm !important;
-        max-width: 48mm !important;
-        margin: 0 !important;
-        padding: 1mm 1.5mm 6mm 1.5mm !important;
-        box-sizing: border-box !important;
-        background: #ffffff !important;
         color: #000000 !important;
-        font-size: 10px !important;
-        word-break: break-word !important;
+        border-color: #000000 !important;
+        background: transparent !important;
+        box-sizing: border-box !important;
+        -webkit-text-stroke: 0.1px #000000;
     }
 
-    body.print-kot #printable-kot,
-    body.print-kot #printable-kot * {
-        visibility: visible !important;
-    }
-
+    /* 4. Kontainer Tiket Dapur (KOT) 58mm (Mode Dapur: body.print-kot) */
     body.print-kot #printable-kot {
         display: block !important;
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
+        visibility: visible !important;
+        position: static !important;
+        float: none !important;
         width: 48mm !important;
         max-width: 48mm !important;
-        margin: 0 !important;
-        padding: 1mm 1.5mm 6mm 1.5mm !important;
+        min-width: 48mm !important;
+        margin: 0 auto !important;
+        padding: 0.5mm 1.5mm 3mm 1.5mm !important;
         box-sizing: border-box !important;
         background: #ffffff !important;
         color: #000000 !important;
+        font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important;
         font-size: 10px !important;
-        word-break: break-word !important;
+        font-weight: 700 !important;
+        line-height: 1.25 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+        overflow: visible !important;
     }
 
+    body.print-kot #printable-kot * {
+        visibility: visible !important;
+        color: #000000 !important;
+        border-color: #000000 !important;
+        background: transparent !important;
+        box-sizing: border-box !important;
+        -webkit-text-stroke: 0.1px #000000;
+    }
+
+    /* Sembunyikan KOT saat cetak struk kasir biasa */
+    body:not(.print-kot) #printable-kot {
+        display: none !important;
+        height: 0 !important;
+        width: 0 !important;
+        visibility: hidden !important;
+        overflow: hidden !important;
+    }
+
+    /* Sembunyikan Struk Kasir saat cetak KOT dapur */
+    body.print-kot #printable-receipt {
+        display: none !important;
+        height: 0 !important;
+        width: 0 !important;
+        visibility: hidden !important;
+        overflow: hidden !important;
+    }
+
+    /* Dukungan Opsional Kertas 80mm */
     body.paper-80mm {
         width: 80mm !important;
+        max-width: 80mm !important;
     }
-    body.paper-80mm #printable-receipt,
-    body.paper-80mm #printable-kot {
+    body.paper-80mm:not(.print-kot) #printable-receipt,
+    body.paper-80mm.print-kot #printable-kot {
         width: 72mm !important;
         max-width: 72mm !important;
+        min-width: 72mm !important;
     }
 }

@@ -21,8 +21,9 @@
                 window.print();
             }, 50);
         }
-    }" class="space-y-5">
-        <!-- Page Header -->
+    }">
+        <div id="backoffice-orders-ui" class="space-y-5">
+            <!-- Page Header -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-stone-200/80">
             <div>
                 <h1 class="text-lg sm:text-xl font-bold text-stone-800 tracking-tight">Riwayat Transaksi & Struk</h1>
@@ -334,61 +335,63 @@
                 </div>
             </div>
         </div>
+    </div> <!-- /#backoffice-orders-ui -->
 
-        <!-- Hidden Printable Thermal Receipt Container for Backoffice (58mm / 80mm standard) -->
-        <div id="printable-receipt" class="print-only text-black font-mono text-[10px] leading-tight select-none">
-            <div class="text-center pb-2 border-b border-dashed border-black">
-                <h2 class="text-xs font-bold tracking-wider uppercase">SOTO LAMONGAN LESTARI</h2>
-                <p class="text-[10px] mt-0.5">Cabang Utama</p>
-                <p class="text-[10px]">Telp: 0852-1325-4219</p>
+    <!-- Hidden Printable Thermal Receipt Container for Backoffice (58mm / 80mm standard) -->
+    <div id="printable-receipt" class="print-only text-black font-mono select-none" style="width: 48mm; max-width: 48mm; margin: 0 auto; page-break-inside: avoid; break-inside: avoid;">
+        <div class="text-center pb-2 border-b border-dashed border-black">
+            <h2 class="text-xs font-bold tracking-wider uppercase text-black">SOTO LAMONGAN LESTARI</h2>
+            <p class="text-[10px] mt-0.5 font-semibold text-black">Cabang Utama</p>
+            <p class="text-[10px] font-semibold text-black">Telp: 0852-1325-4219</p>
+        </div>
+
+        <div class="py-1.5 border-b border-dashed border-black text-[10px] space-y-0.5">
+            <div class="flex justify-between">
+                <span>No: <strong class="font-bold text-black" x-text="selectedOrder?.order_number"></strong></span>
+                <span class="font-semibold text-black" x-text="selectedOrder?.created_at ? new Date(selectedOrder.created_at).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'}) : ''"></span>
             </div>
-
-            <div class="py-1.5 border-b border-dashed border-black text-[10px] space-y-0.5">
-                <div class="flex justify-between">
-                    <span>No: <strong x-text="selectedOrder?.order_number"></strong></span>
-                    <span x-text="selectedOrder?.created_at ? new Date(selectedOrder.created_at).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'}) : ''"></span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Tgl: <span x-text="selectedOrder?.created_at ? new Date(selectedOrder.created_at).toLocaleDateString('id-ID') : ''"></span></span>
-                    <span class="font-bold uppercase" x-text="selectedOrder?.status"></span>
-                </div>
-                <div class="flex justify-between" x-show="selectedOrder?.customer_name">
-                    <span>Pelanggan:</span>
-                    <span x-text="selectedOrder?.customer_name"></span>
-                </div>
+            <div class="flex justify-between">
+                <span>Tgl: <span class="font-semibold text-black" x-text="selectedOrder?.created_at ? new Date(selectedOrder.created_at).toLocaleDateString('id-ID') : ''"></span></span>
+                <span class="font-bold uppercase text-black" x-text="selectedOrder?.status"></span>
             </div>
-
-            <!-- Items -->
-            <div class="py-1.5 border-b border-dashed border-black space-y-1">
-                <template x-for="item in (selectedOrder?.items || [])" :key="item.id">
-                    <div>
-                        <div class="font-bold" x-text="item.product?.name || 'Menu'"></div>
-                        <div class="flex justify-between text-[10px]">
-                            <span>
-                                <span x-text="item.quantity"></span> x <span x-text="Number(item.unit_price).toLocaleString('id-ID')"></span>
-                            </span>
-                            <span x-text="Number(item.subtotal).toLocaleString('id-ID')"></span>
-                        </div>
-                    </div>
-                </template>
-            </div>
-
-            <!-- Total -->
-            <div class="py-1.5 border-b border-dashed border-black space-y-0.5 text-[10px]">
-                <div class="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span x-text="Number(selectedOrder?.total_amount || 0).toLocaleString('id-ID')"></span>
-                </div>
-                <div class="flex justify-between font-bold text-xs pt-1">
-                    <span>TOTAL:</span>
-                    <span>Rp<span x-text="Number(selectedOrder?.final_amount || 0).toLocaleString('id-ID')"></span></span>
-                </div>
-            </div>
-
-            <div class="text-center pt-2 text-[10px]">
-                <p>Terima Kasih Atas Kunjungan Anda!</p>
-                <p>Rasa Mantap, Harga Bersahabat</p>
+            <div class="flex justify-between" x-show="selectedOrder?.customer_name">
+                <span>Pelanggan:</span>
+                <span class="font-semibold text-black" x-text="selectedOrder?.customer_name"></span>
             </div>
         </div>
+
+        <!-- Items -->
+        <div class="py-1.5 border-b border-dashed border-black space-y-1">
+            <template x-for="item in (selectedOrder?.items || [])" :key="item.id">
+                <div>
+                    <div class="font-bold text-[11px] text-black" x-text="item.product?.name || 'Menu'"></div>
+                    <div class="flex justify-between text-[10px]">
+                        <span class="font-semibold text-black">
+                            <span x-text="item.quantity"></span> x <span x-text="Number(item.unit_price).toLocaleString('id-ID')"></span>
+                        </span>
+                        <span class="font-bold text-black" x-text="Number(item.subtotal).toLocaleString('id-ID')"></span>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- Total -->
+        <div class="py-1.5 border-b border-dashed border-black space-y-0.5 text-[10px]">
+            <div class="flex justify-between">
+                <span class="font-semibold text-black">Subtotal:</span>
+                <span class="font-bold text-black" x-text="Number(selectedOrder?.total_amount || 0).toLocaleString('id-ID')"></span>
+            </div>
+            <div class="flex justify-between font-bold text-xs pt-1 border-t border-dotted border-black">
+                <span class="text-black">TOTAL:</span>
+                <span class="text-black">Rp<span x-text="Number(selectedOrder?.final_amount || 0).toLocaleString('id-ID')"></span></span>
+            </div>
+        </div>
+
+        <div class="text-center pt-2 text-[10px] space-y-0.5 font-semibold text-black">
+            <p class="font-bold">Terima Kasih Atas Kunjungan Anda!</p>
+            <p>Rasa Mantap, Harga Bersahabat</p>
+            <p class="text-[9px] pt-1">SLL Smart POS Cloud</p>
+        </div>
+    </div>
     </div>
 </x-app-layout>

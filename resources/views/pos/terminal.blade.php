@@ -35,7 +35,8 @@
       x-data="posTerminal()"
       x-init="init()">
 
-    <div class="h-screen w-screen flex flex-col overflow-hidden">
+    <!-- Wrapper seluruh UI Kasir POS (Sembunyi Total saat Mode Print agar tidak memakan tinggi kertas 58mm) -->
+    <div id="pos-app-ui" class="h-screen w-screen flex flex-col overflow-hidden">
         <!-- 1. Top Bar: SLL Clean Rail with Shift Controls & Open Bills -->
         <header class="h-14 bg-[#0F172A] border-b border-slate-800 px-2.5 sm:px-4 flex items-center justify-between shrink-0 text-white z-30">
             <!-- Brand & Outlet Info -->
@@ -1257,129 +1258,133 @@
                 </button>
             </div>
         </div>
+    </div> <!-- /#pos-app-ui (Diisolasi agar tidak memakan ruang cetak thermal 58mm) -->
 
-        <!-- 13. 58mm/80mm Thermal Receipt Container (Cetak Struk Transaksi Pelanggan) -->
-        <div id="printable-receipt" class="print-only text-black font-mono text-[10px] leading-tight select-none">
-            <div class="text-center pb-2 border-b border-dashed border-black">
-                <h2 class="text-xs font-bold tracking-wider uppercase">SOTO LAMONGAN LESTARI</h2>
-                <p class="text-[10px] mt-0.5">{{ $outlet->name ?? 'Cabang Utama' }}</p>
-                <p class="text-[10px]">Telp: 0852-1325-4219</p>
+    <!-- ========================================================================= -->
+    <!-- THERMAL PRINT CONTAINERS (ISOLASI PENUH DI LUAR LAYOUT UTAMA UNTUK 58MM)   -->
+    <!-- ========================================================================= -->
+
+    <!-- 13. 58mm/80mm Thermal Receipt Container (Cetak Struk Transaksi Pelanggan) -->
+    <div id="printable-receipt" class="print-only text-black font-mono select-none" style="width: 48mm; max-width: 48mm; margin: 0 auto; page-break-inside: avoid; break-inside: avoid;">
+        <div class="text-center pb-2 border-b border-dashed border-black">
+            <h2 class="text-xs font-bold tracking-wider uppercase text-black">SOTO LAMONGAN LESTARI</h2>
+            <p class="text-[10px] mt-0.5 font-semibold text-black">{{ $outlet->name ?? 'Cabang Utama' }}</p>
+            <p class="text-[10px] font-semibold text-black">Telp: 0852-1325-4219</p>
+        </div>
+
+        <div class="py-1.5 border-b border-dashed border-black text-[10px] space-y-0.5">
+            <div class="flex justify-between">
+                <span>No: <strong class="font-bold text-black" x-text="completedOrder?.order_number"></strong></span>
+                <span class="font-semibold text-black" x-text="new Date(completedOrder?.created_at || Date.now()).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})"></span>
             </div>
-
-            <div class="py-1.5 border-b border-dashed border-black text-[10px] space-y-0.5">
-                <div class="flex justify-between">
-                    <span>No: <strong x-text="completedOrder?.order_number"></strong></span>
-                    <span x-text="new Date(completedOrder?.created_at || Date.now()).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})"></span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Tgl: <span x-text="new Date(completedOrder?.created_at || Date.now()).toLocaleDateString('id-ID')"></span></span>
-                    <span class="font-bold uppercase" x-text="orderType"></span>
-                </div>
-                <div class="flex justify-between" x-show="completedOrder?.customer_name">
-                    <span>Plg: <span x-text="completedOrder?.customer_name"></span></span>
-                </div>
+            <div class="flex justify-between">
+                <span>Tgl: <span class="font-semibold text-black" x-text="new Date(completedOrder?.created_at || Date.now()).toLocaleDateString('id-ID')"></span></span>
+                <span class="font-bold uppercase text-black" x-text="orderType"></span>
             </div>
-
-            <!-- Items -->
-            <div class="py-1.5 border-b border-dashed border-black space-y-1">
-                <template x-for="item in (completedOrder?.items || [])" :key="item.name">
-                    <div>
-                        <div class="font-bold text-[11px]" x-text="item.name"></div>
-                        <div class="flex justify-between text-[10px]">
-                            <span x-text="`${item.quantity} x ${Number(item.unit_price).toLocaleString('id-ID')}`"></span>
-                            <span class="font-bold" x-text="Number(item.subtotal).toLocaleString('id-ID')"></span>
-                        </div>
-                        <template x-if="item.notes">
-                            <div class="text-[9px] italic" x-text="`* ${item.notes}`"></div>
-                        </template>
-                    </div>
-                </template>
-            </div>
-
-            <!-- Totals -->
-            <div class="py-1.5 border-b border-dashed border-black text-[10px] space-y-0.5">
-                <div class="flex justify-between">
-                    <span>Subtotal</span>
-                    <span x-text="Number(completedOrder?.total_amount || 0).toLocaleString('id-ID')"></span>
-                </div>
-                <div class="flex justify-between" x-show="completedOrder?.discount_amount > 0">
-                    <span>Diskon</span>
-                    <span x-text="`-${Number(completedOrder?.discount_amount || 0).toLocaleString('id-ID')}`"></span>
-                </div>
-                <div class="flex justify-between" x-show="Number(completedOrder?.tax_amount || 0) > 0">
-                    <span>Pajak</span>
-                    <span x-text="Number(completedOrder?.tax_amount || 0).toLocaleString('id-ID')"></span>
-                </div>
-                <div class="flex justify-between font-bold text-xs pt-1 border-t border-dotted border-black">
-                    <span>TOTAL</span>
-                    <span x-text="`Rp${Number(completedOrder?.final_amount || 0).toLocaleString('id-ID')}`"></span>
-                </div>
-            </div>
-
-            <!-- Payment info -->
-            <div class="py-1.5 border-b border-dashed border-black text-[10px] space-y-0.5">
-                <div class="flex justify-between">
-                    <span>Metode</span>
-                    <span class="font-bold uppercase" x-text="completedOrder?.payment?.method || (completedOrder?.payments ? 'KOMBINASI' : 'CASH')"></span>
-                </div>
-                <template x-if="completedOrder?.changeDue > 0">
-                    <div class="flex justify-between font-bold">
-                        <span>Kembalian</span>
-                        <span x-text="Number(completedOrder?.changeDue || 0).toLocaleString('id-ID')"></span>
-                    </div>
-                </template>
-            </div>
-
-            <!-- Footer -->
-            <div class="text-center pt-2 text-[10px] space-y-0.5">
-                <p class="font-bold">Rasa Mantap, Harga Bersahabat</p>
-                <p>Terima Kasih Atas Kunjungan Anda!</p>
-                <p class="text-[8px] text-gray-500 pt-1">SLL Smart POS Cloud</p>
+            <div class="flex justify-between" x-show="completedOrder?.customer_name">
+                <span>Plg: <span class="font-semibold text-black" x-text="completedOrder?.customer_name"></span></span>
             </div>
         </div>
 
-        <!-- 14. Kitchen Order Ticket (KOT) Thermal Container (Khusus Dapur & Bar, Tanpa Harga) -->
-        <div id="printable-kot" class="print-only text-black font-mono text-[10px] leading-tight select-none">
-            <div class="text-center pb-2 border-b-2 border-black">
-                <h2 class="text-sm font-black tracking-wider uppercase">TIKET DAPUR (KOT)</h2>
-                <p class="text-xs font-bold">{{ $outlet->name ?? 'Cabang Utama' }}</p>
-            </div>
-
-            <div class="py-2 border-b border-black text-xs space-y-0.5">
-                <div class="flex justify-between font-bold">
-                    <span>TIPE:</span>
-                    <span class="uppercase text-sm" x-text="orderType"></span>
-                </div>
-                <div class="flex justify-between">
-                    <span>MEJA / PLG:</span>
-                    <span class="font-black text-sm" x-text="selectedTableName || customerName || 'Dine-In'"></span>
-                </div>
-                <div class="flex justify-between text-[10px]">
-                    <span>WAKTU:</span>
-                    <span x-text="new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})"></span>
-                </div>
-            </div>
-
-            <!-- List Menu yang Dimasak -->
-            <div class="py-2 border-b-2 border-black space-y-2">
-                <template x-for="item in (cart.length > 0 ? cart : (completedOrder?.items || []))" :key="item.name">
-                    <div class="pb-1 border-b border-dotted border-stone-400">
-                        <div class="flex justify-between items-start text-xs font-black">
-                            <span x-text="item.name"></span>
-                            <span class="text-sm px-1.5 py-0.2 bg-black text-white rounded font-mono" x-text="`${item.quantity}x`"></span>
-                        </div>
-                        <template x-if="item.notes">
-                            <div class="text-[11px] font-bold text-black mt-0.5 uppercase tracking-wide">
-                                ➔ CATATAN: <span x-text="item.notes"></span>
-                            </div>
-                        </template>
+        <!-- Items -->
+        <div class="py-1.5 border-b border-dashed border-black space-y-1">
+            <template x-for="item in (completedOrder?.items || [])" :key="item.name">
+                <div>
+                    <div class="font-bold text-[11px] text-black" x-text="item.name"></div>
+                    <div class="flex justify-between text-[10px]">
+                        <span class="font-semibold text-black" x-text="`${item.quantity} x ${Number(item.unit_price).toLocaleString('id-ID')}`"></span>
+                        <span class="font-bold text-black" x-text="Number(item.subtotal).toLocaleString('id-ID')"></span>
                     </div>
-                </template>
-            </div>
+                    <template x-if="item.notes">
+                        <div class="text-[9px] font-semibold text-black italic" x-text="`* ${item.notes}`"></div>
+                    </template>
+                </div>
+            </template>
+        </div>
 
-            <div class="text-center pt-2 text-[10px] font-bold">
-                *** SEGERA DISAJIKAN PANAS ***
+        <!-- Totals -->
+        <div class="py-1.5 border-b border-dashed border-black text-[10px] space-y-0.5">
+            <div class="flex justify-between">
+                <span class="font-semibold text-black">Subtotal</span>
+                <span class="font-bold text-black" x-text="Number(completedOrder?.total_amount || 0).toLocaleString('id-ID')"></span>
             </div>
+            <div class="flex justify-between" x-show="completedOrder?.discount_amount > 0">
+                <span class="font-semibold text-black">Diskon</span>
+                <span class="font-bold text-black" x-text="`-${Number(completedOrder?.discount_amount || 0).toLocaleString('id-ID')}`"></span>
+            </div>
+            <div class="flex justify-between" x-show="Number(completedOrder?.tax_amount || 0) > 0">
+                <span class="font-semibold text-black">Pajak</span>
+                <span class="font-bold text-black" x-text="Number(completedOrder?.tax_amount || 0).toLocaleString('id-ID')"></span>
+            </div>
+            <div class="flex justify-between font-bold text-xs pt-1 border-t border-dotted border-black">
+                <span class="text-black">TOTAL</span>
+                <span class="text-black" x-text="`Rp${Number(completedOrder?.final_amount || 0).toLocaleString('id-ID')}`"></span>
+            </div>
+        </div>
+
+        <!-- Payment info -->
+        <div class="py-1.5 border-b border-dashed border-black text-[10px] space-y-0.5">
+            <div class="flex justify-between">
+                <span class="font-semibold text-black">Metode</span>
+                <span class="font-bold uppercase text-black" x-text="completedOrder?.payment?.method || (completedOrder?.payments ? 'KOMBINASI' : 'CASH')"></span>
+            </div>
+            <template x-if="completedOrder?.changeDue > 0">
+                <div class="flex justify-between font-bold text-black">
+                    <span>Kembalian</span>
+                    <span x-text="Number(completedOrder?.changeDue || 0).toLocaleString('id-ID')"></span>
+                </div>
+            </template>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center pt-2 text-[10px] space-y-0.5 font-semibold text-black">
+            <p class="font-bold">Rasa Mantap, Harga Bersahabat</p>
+            <p>Terima Kasih Atas Kunjungan Anda!</p>
+            <p class="text-[9px] pt-1">SLL Smart POS Cloud</p>
+        </div>
+    </div>
+
+    <!-- 14. Kitchen Order Ticket (KOT) Thermal Container (Khusus Dapur & Bar, Tanpa Harga) -->
+    <div id="printable-kot" class="print-only text-black font-mono select-none" style="width: 48mm; max-width: 48mm; margin: 0 auto; page-break-inside: avoid; break-inside: avoid;">
+        <div class="text-center pb-2 border-b-2 border-black">
+            <h2 class="text-sm font-black tracking-wider uppercase text-black">TIKET DAPUR (KOT)</h2>
+            <p class="text-xs font-bold text-black">{{ $outlet->name ?? 'Cabang Utama' }}</p>
+        </div>
+
+        <div class="py-2 border-b border-black text-xs space-y-0.5">
+            <div class="flex justify-between font-bold text-black">
+                <span>TIPE:</span>
+                <span class="uppercase text-sm" x-text="orderType"></span>
+            </div>
+            <div class="flex justify-between text-black">
+                <span class="font-bold">MEJA/PLG:</span>
+                <span class="font-black text-sm" x-text="selectedTableName || customerName || 'Dine-In'"></span>
+            </div>
+            <div class="flex justify-between text-[10px] font-semibold text-black">
+                <span>WAKTU:</span>
+                <span x-text="new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})"></span>
+            </div>
+        </div>
+
+        <!-- List Menu yang Dimasak -->
+        <div class="py-2 border-b-2 border-black space-y-2">
+            <template x-for="item in (cart.length > 0 ? cart : (completedOrder?.items || []))" :key="item.name">
+                <div class="pb-1 border-b border-dotted border-black">
+                    <div class="flex justify-between items-start text-xs font-black text-black">
+                        <span x-text="item.name"></span>
+                        <span class="text-sm px-1.5 py-0.2 bg-black text-white rounded font-mono" x-text="`${item.quantity}x`"></span>
+                    </div>
+                    <template x-if="item.notes">
+                        <div class="text-[11px] font-bold text-black mt-0.5 uppercase tracking-wide">
+                            ➔ CATATAN: <span x-text="item.notes"></span>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+
+        <div class="text-center pt-2 text-[10px] font-black text-black">
+            *** SEGERA DISAJIKAN PANAS ***
         </div>
     </div>
 </body>
