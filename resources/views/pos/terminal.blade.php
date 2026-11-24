@@ -201,6 +201,15 @@
                     </div>
                 </div>
 
+                <!-- Tombol Buka Struk Terakhir (Cetak Ulang Struk di Tablet) -->
+                <button type="button" 
+                        @click="openLastReceipt()"
+                        class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition shadow-xs flex items-center gap-1.5 shrink-0 active:scale-95"
+                        title="Buka atau Cetak Ulang Struk Transaksi Terakhir">
+                    <span>🧾</span>
+                    <span class="hidden md:inline">Buka Struk</span>
+                </button>
+
                 <!-- Backoffice Link -->
                 <a href="{{ route('dashboard') }}" class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-xs flex items-center gap-1 shrink-0">
                     <span class="hidden sm:inline">Backoffice</span>
@@ -668,10 +677,11 @@
 
         <!-- 6. Payment Modal (Tunai, QRIS, Transfer, Multi-Payment Split Bill) -->
         <div x-show="paymentModalOpen" 
+             @click.self="paymentModalOpen = false"
              class="fixed inset-0 bg-slate-900/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
              x-cloak>
             <div class="bg-white text-slate-800 rounded-t-3xl sm:rounded-3xl max-w-sm sm:max-w-md w-full border border-slate-200/90 shadow-xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in duration-150" 
-                 @click.outside="paymentModalOpen = false">
+                 @click.stop>
                 <!-- Header -->
                 <div class="p-4 border-b border-slate-100 flex items-center justify-between shrink-0">
                     <div>
@@ -955,10 +965,11 @@
 
         <!-- 7. Success Modal -->
         <div x-show="successModalOpen"
+             @click.self="successModalOpen = false"
              class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
              x-cloak>
             <div class="bg-white text-slate-800 rounded-3xl max-w-sm sm:max-w-md w-full border border-slate-200/90 shadow-xl my-auto max-h-[92vh] flex flex-col overflow-hidden p-5 text-center animate-in fade-in duration-150"
-                 @click.outside="successModalOpen = false">
+                 @click.stop>
                 <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto mb-2.5 font-bold text-lg shrink-0">
                     ✓
                 </div>

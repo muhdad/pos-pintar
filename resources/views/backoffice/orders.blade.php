@@ -7,13 +7,13 @@
         selectedOrder: null,
 
         openDetail(orderId) {
-            this.selectedOrder = this.ordersList.find(o => String(o.id) === String(orderId)) || null;
+            this.selectedOrder = this.ordersList.find(o => String(o.id) === String(orderId) || String(o.order_number) === String(orderId)) || null;
             this.detailModalOpen = true;
         },
 
         printCurrentReceipt() {
             if (!this.selectedOrder) return;
-            if (window.thermalPrinter && window.thermalPrinter.isConnected) {
+            if (window.thermalPrinter) {
                 window.thermalPrinter.printReceipt(this.selectedOrder);
                 return;
             }
@@ -214,10 +214,11 @@
 
         <!-- Detail Struk Modal (Ringan, Tanpa Backdrop-Blur Berat, Touch Friendly) -->
         <div x-show="detailModalOpen" 
+             @click.self="detailModalOpen = false" 
              class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto" 
              x-cloak>
-            <div class="bg-white rounded-2xl max-w-sm sm:max-w-md w-full p-4 sm:p-6 border border-stone-200 shadow-xl max-h-[90vh] overflow-y-auto animate-in fade-in duration-100"
-                 @click.outside="detailModalOpen = false">
+            <div class="bg-white rounded-2xl max-w-sm sm:max-w-md w-full p-4 sm:p-6 border border-stone-200 shadow-xl max-h-[90vh] overflow-y-auto"
+                 @click.stop>
                 
                 <div class="flex items-center justify-between pb-3 border-b border-stone-100">
                     <div>
