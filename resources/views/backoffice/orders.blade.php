@@ -15,9 +15,11 @@
             if (!this.selectedOrder) return;
             if (window.thermalPrinter && window.thermalPrinter.isConnected) {
                 window.thermalPrinter.printReceipt(this.selectedOrder);
-            } else {
-                window.print();
+                return;
             }
+            setTimeout(() => {
+                window.print();
+            }, 50);
         }
     }" class="space-y-5">
         <!-- Page Header -->
@@ -27,6 +29,15 @@
                 <p class="text-xs text-stone-500 mt-0.5">Daftar rekonsiliasi seluruh transaksi kasir online dan offline yang telah tersinkronisasi.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
+                <!-- Connect Printer Thermal Button for Tablet -->
+                <button type="button" 
+                        onclick="window.thermalPrinter && window.thermalPrinter.connectBluetooth()" 
+                        class="px-3.5 py-2 rounded-xl bg-white border border-stone-200 text-stone-700 hover:bg-stone-50 font-semibold text-xs shadow-xs transition flex items-center gap-1.5"
+                        title="Hubungkan Printer Thermal 58mm via Bluetooth">
+                    <span>🖨️</span>
+                    <span x-text="window.thermalPrinter?.isConnected ? (window.thermalPrinter.printerName || 'Printer 58mm') : 'Printer 58mm'"></span>
+                </button>
+
                 <!-- Export Excel Button -->
                 <a href="{{ route('backoffice.orders.export-excel', request()->query()) }}" 
                    class="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-semibold text-xs transition flex items-center gap-1.5 shadow-xs">
@@ -285,6 +296,16 @@
                     </form>
                 </template>
 
+                <!-- Strip Status Printer Thermal -->
+                <div class="p-2.5 bg-stone-50 rounded-xl border border-stone-200/80 flex items-center justify-between text-xs">
+                    <span class="text-[11px] text-stone-600 font-medium">Printer: <strong class="text-emerald-700 font-mono" x-text="window.thermalPrinter?.isConnected ? (window.thermalPrinter.printerName || '58mm Terhubung') : 'Siap Cetak 58mm'"></strong></span>
+                    <button type="button" 
+                            @click="window.thermalPrinter && window.thermalPrinter.connectBluetooth()" 
+                            class="text-[10px] font-bold text-emerald-800 bg-white px-2 py-1 rounded-lg border border-stone-200 hover:bg-emerald-50">
+                        Pairing Bluetooth
+                    </button>
+                </div>
+
                 <!-- Action Buttons: Print Struk & Tutup -->
                 <div class="mt-4 flex gap-2">
                     <button type="button" 
@@ -305,7 +326,7 @@
         </div>
 
         <!-- Hidden Printable Thermal Receipt Container for Backoffice (58mm / 80mm standard) -->
-        <div id="printable-receipt" class="hidden text-black font-mono text-[11px] leading-tight select-none">
+        <div id="printable-receipt" class="print-only text-black font-mono text-[10px] leading-tight select-none">
             <div class="text-center pb-2 border-b border-dashed border-black">
                 <h2 class="text-xs font-bold tracking-wider uppercase">SOTO LAMONGAN LESTARI</h2>
                 <p class="text-[10px] mt-0.5">Cabang Utama</p>

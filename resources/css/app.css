@@ -231,13 +231,18 @@ button, a {
     border-color: #10B981;
 }
 
-/* Thermal receipt printable mode (Khusus Kertas 58mm Standar Resto & 80mm Opsional) */
+/* Mode Print Struk Thermal 58mm */
+.print-only {
+    display: none;
+}
+
 @page {
     size: 58mm auto;
     margin: 0mm;
 }
 
 @media print {
+    /* Sembunyikan seluruh elemen UI browser, sidebar, dan modal backdrop */
     html, body {
         width: 58mm !important;
         margin: 0 !important;
@@ -255,6 +260,12 @@ button, a {
         visibility: hidden !important;
     }
 
+    .fixed, aside, header, nav, .no-print, [role="dialog"] {
+        display: none !important;
+    }
+
+    /* Tampilkan hanya wadah struk 58mm */
+    .print-only,
     body:not(.print-kot) #printable-receipt,
     body:not(.print-kot) #printable-receipt * {
         visibility: visible !important;

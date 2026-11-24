@@ -15,6 +15,23 @@ posDb.version(1).stores({
 });
 
 /**
+ * Universal UUID generator yang 100% aman di HTTP, HTTPS, Tablet, HP, maupun localhost.
+ * Mencegah TypeError: crypto.randomUUID is not a function di non-secure context (misal akses via IP Wi-Fi di tablet).
+ */
+export function safeUuid() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        try {
+            return crypto.randomUUID();
+        } catch (e) {}
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+/**
  * Format string ribuan dengan titik (contoh: 25000 -> 25.000)
  */
 export function formatThousand(val) {
@@ -565,33 +582,33 @@ export function posTerminal() {
             if (this.cart.length === 0 || this.isHoldingOrder) return;
             this.isHoldingOrder = true;
 
-            const orderId = this.currentOpenBillId || crypto.randomUUID();
-            const orderNumber = `HOLD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-
-            const labelPelanggan = this.orderType === 'DINE_IN' 
-                ? (this.selectedTableName || (this.customerName || 'Dine-In')) 
-                : (this.customerName || this.orderType);
-
-            const payload = {
-                id: orderId,
-                tenant_id: window.POS_CONFIG?.tenantId || null,
-                outlet_id: window.POS_CONFIG?.outletId || null,
-                table_id: this.orderType === 'DINE_IN' ? this.selectedTableId || null : null,
-                customer_name: labelPelanggan + ' [' + this.orderType + ']',
-                discount_amount: this.discount,
-                tax_amount: this.taxAmount,
-                items: this.cart.map(item => ({
-                    product_id: item.product_id,
-                    name: item.name,
-                    quantity: item.quantity,
-                    unit_price: item.unit_price,
-                    unit_cost: item.cogs,
-                    subtotal: item.subtotal,
-                    notes: item.notes || null,
-                }))
-            };
-
             try {
+                const orderId = this.currentOpenBillId || safeUuid();
+                const orderNumber = `HOLD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+                const labelPelanggan = this.orderType === 'DINE_IN' 
+                    ? (this.selectedTableName || (this.customerName || 'Dine-In')) 
+                    : (this.customerName || this.orderType);
+
+                const payload = {
+                    id: orderId,
+                    tenant_id: window.POS_CONFIG?.tenantId || null,
+                    outlet_id: window.POS_CONFIG?.outletId || null,
+                    table_id: this.orderType === 'DINE_IN' ? this.selectedTableId || null : null,
+                    customer_name: labelPelanggan + ' [' + this.orderType + ']',
+                    discount_amount: this.discount,
+                    tax_amount: this.taxAmount,
+                    items: this.cart.map(item => ({
+                        product_id: item.product_id,
+                        name: item.name,
+                        quantity: item.quantity,
+                        unit_price: item.unit_price,
+                        unit_cost: item.cogs,
+                        subtotal: item.subtotal,
+                        notes: item.notes || null,
+                    }))
+                };
+
                 if (this.isOnline) {
                     const res = await fetch('/api/pos/hold-order', {
                         method: 'POST',
@@ -702,76 +719,77 @@ export function posTerminal() {
             }
 
             this.isProcessingCheckout = true;
-            const orderId = this.currentOpenBillId || crypto.randomUUID();
-            const now = new Date().toISOString();
-            const orderNumber = `POS-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-
-            const labelPelanggan = this.orderType === 'DINE_IN' 
-                ? (this.selectedTableName || (this.customerName || 'Dine-In')) 
-                : (this.customerName || this.orderType);
-
-            // Susun payload pembayaran tunggal atau multi-payment
-            let paymentPayload = null;
-            let paymentsPayload = null;
-
-            if (this.selectedPaymentMethod === 'MULTI') {
-                paymentsPayload = [
-                    {
-                        method: 'CASH',
-                        amount: parseFloat(this.multiCashAmount),
-                        status: 'SETTLED',
-                        paid_at: now
-                    },
-                    {
-                        method: this.multiNonCashMethod,
-                        amount: parseFloat(this.multiNonCashAmount),
-                        status: 'SETTLED',
-                        paid_at: now
-                    }
-                ];
-            } else {
-                paymentPayload = {
-                    method: this.selectedPaymentMethod,
-                    amount: this.finalTotal,
-                    status: 'SETTLED',
-                    paid_at: now
-                };
-            }
-
-            const orderPayload = {
-                id: orderId,
-                tenant_id: window.POS_CONFIG?.tenantId || null,
-                outlet_id: window.POS_CONFIG?.outletId || null,
-                shift_id: this.activeShift?.id || window.POS_CONFIG?.shiftId || null,
-                user_id: window.POS_CONFIG?.userId || null,
-                table_id: this.orderType === 'DINE_IN' ? this.selectedTableId || null : null,
-                order_number: orderNumber,
-                status: 'PAID',
-                total_amount: this.subtotal,
-                discount_amount: this.discount,
-                tax_amount: this.taxAmount,
-                final_amount: this.finalTotal,
-                customer_name: labelPelanggan + ' [' + this.orderType + ']',
-                customer_phone: this.customerPhone || null,
-                items: this.cart.map(item => ({
-                    product_id: item.product_id,
-                    name: item.name,
-                    quantity: item.quantity,
-                    unit_price: item.unit_price,
-                    unit_cost: item.cogs,
-                    subtotal: item.subtotal,
-                    notes: item.notes || null,
-                })),
-                payment: paymentPayload,
-                payments: paymentsPayload,
-                sync_status: 'PENDING_SYNC',
-                created_at: now,
-            };
-
-            // Clone murni plain JSON untuk mencegah error "Proxy object could not be cloned" di IndexedDB & BroadcastChannel
-            const cleanOrderPayload = JSON.parse(JSON.stringify(orderPayload));
 
             try {
+                const orderId = this.currentOpenBillId || safeUuid();
+                const now = new Date().toISOString();
+                const orderNumber = `POS-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+                const labelPelanggan = this.orderType === 'DINE_IN' 
+                    ? (this.selectedTableName || (this.customerName || 'Dine-In')) 
+                    : (this.customerName || this.orderType);
+
+                // Susun payload pembayaran tunggal atau multi-payment
+                let paymentPayload = null;
+                let paymentsPayload = null;
+
+                if (this.selectedPaymentMethod === 'MULTI') {
+                    paymentsPayload = [
+                        {
+                            method: 'CASH',
+                            amount: parseFloat(this.multiCashAmount),
+                            status: 'SETTLED',
+                            paid_at: now
+                        },
+                        {
+                            method: this.multiNonCashMethod,
+                            amount: parseFloat(this.multiNonCashAmount),
+                            status: 'SETTLED',
+                            paid_at: now
+                        }
+                    ];
+                } else {
+                    paymentPayload = {
+                        method: this.selectedPaymentMethod,
+                        amount: this.finalTotal,
+                        status: 'SETTLED',
+                        paid_at: now
+                    };
+                }
+
+                const orderPayload = {
+                    id: orderId,
+                    tenant_id: window.POS_CONFIG?.tenantId || null,
+                    outlet_id: window.POS_CONFIG?.outletId || null,
+                    shift_id: this.activeShift?.id || window.POS_CONFIG?.shiftId || null,
+                    user_id: window.POS_CONFIG?.userId || null,
+                    table_id: this.orderType === 'DINE_IN' ? this.selectedTableId || null : null,
+                    order_number: orderNumber,
+                    status: 'PAID',
+                    total_amount: this.subtotal,
+                    discount_amount: this.discount,
+                    tax_amount: this.taxAmount,
+                    final_amount: this.finalTotal,
+                    customer_name: labelPelanggan + ' [' + this.orderType + ']',
+                    customer_phone: this.customerPhone || null,
+                    items: this.cart.map(item => ({
+                        product_id: item.product_id,
+                        name: item.name,
+                        quantity: item.quantity,
+                        unit_price: item.unit_price,
+                        unit_cost: item.cogs,
+                        subtotal: item.subtotal,
+                        notes: item.notes || null,
+                    })),
+                    payment: paymentPayload,
+                    payments: paymentsPayload,
+                    sync_status: 'PENDING_SYNC',
+                    created_at: now,
+                };
+
+                // Clone murni plain JSON untuk mencegah error "Proxy object could not be cloned" di IndexedDB & BroadcastChannel
+                const cleanOrderPayload = JSON.parse(JSON.stringify(orderPayload));
+
                 // 1. Simpan ke IndexedDB lokal (Offline-First)
                 await posDb.orders.put(cleanOrderPayload);
                 await posDb.sync_queue.add({
@@ -811,9 +829,11 @@ export function posTerminal() {
                     }
                 }
 
-                // 4. Sinkronisasikan ke backend Laravel jika online
+                // 4. Sinkronisasikan ke backend Laravel di background (Asinkron 0ms tanpa memblokir kasir)
                 if (this.isOnline && !this.currentOpenBillId) {
-                    await this.syncOfflineQueue();
+                    setTimeout(() => {
+                        this.syncOfflineQueue();
+                    }, 50);
                 }
 
                 // Bebaskan meja jika dine in
@@ -822,7 +842,7 @@ export function posTerminal() {
                     if (tbl) tbl.is_occupied = false;
                 }
 
-                // 5. Tampilkan Modal Sukses Transaksi
+                // 5. Tampilkan Modal Sukses Transaksi Instan
                 this.completedOrder = JSON.parse(JSON.stringify({
                     ...cleanOrderPayload,
                     changeDue: this.changeDue,

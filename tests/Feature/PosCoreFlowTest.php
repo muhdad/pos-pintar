@@ -16,23 +16,27 @@ use Tests\TestCase;
 
 class PosCoreFlowTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_complete_pos_order_inventory_deduction_and_cogs_snapshot(): void
     {
-        $tenant = Tenant::where('slug', 'kopi-senja')->first();
-        $outlet = Outlet::where('tenant_id', $tenant->id)->first();
-        $user = User::where('email', 'kasir@kopisenja.com')->first();
-        $product = Product::where('name', 'Kopi Susu Gula Aren')->first();
+        $this->seed();
 
-        $bijiKopi = RawMaterial::where('name', 'Biji Kopi House Blend')->first();
+        $tenant = Tenant::first();
+        $outlet = Outlet::where('tenant_id', $tenant->id)->first();
+        $user = User::where('tenant_id', $tenant->id)->first();
+        $product = Product::where('name', 'Soto Daging')->first();
+
+        $dagingSapi = RawMaterial::where('name', 'Daging Sapi Pilihan')->first();
         $initialStock = OutletStock::where('outlet_id', $outlet->id)
-            ->where('raw_material_id', $bijiKopi->id)
+            ->where('raw_material_id', $dagingSapi->id)
             ->first();
 
         $initialStockQty = (float) $initialStock->current_stock;
 
         $orderService = app(OrderService::class);
 
-        // Kasir melakukan order 2x Kopi Susu Gula Aren
+        // Kasir melakukan order 2x Soto Daging
         $order = $orderService->checkout([
             'tenant_id' => $tenant->id,
             'outlet_id' => $outlet->id,
@@ -41,44 +45,44 @@ class PosCoreFlowTest extends TestCase
                 [
                     'product_id' => $product->id,
                     'quantity' => 2,
-                    'unit_price' => 22000,
+                    'unit_price' => 23000,
                 ],
             ],
             'payment' => [
                 'method' => 'CASH',
-                'amount' => 44000,
+                'amount' => 46000,
             ],
         ]);
 
         $this->assertNotNull($order);
-        $this->assertEquals(44000, $order->total_amount);
+        $this->assertEquals(46000, $order->total_amount);
 
         // 1. Verifikasi Snapshot Finansial di order_items (AGENTS.md Rule 3)
         $orderItem = $order->items()->first();
-        $this->assertEquals(22000, (float) $orderItem->unit_price);
-        $this->assertEquals(9710, (float) $orderItem->unit_cost); // HPP Snapshot!
+        $this->assertEquals(23000, (float) $orderItem->unit_price);
+        $this->assertEquals(12500, (float) $orderItem->unit_cost); // HPP Snapshot!
 
-        // 2. Verifikasi Pemotongan Stok Bahan Baku Resep BOM (2x 18g = 36g)
+        // 2. Verifikasi Pemotongan Stok Bahan Baku Resep BOM (2x 90g = 180g)
         $updatedStock = OutletStock::where('outlet_id', $outlet->id)
-            ->where('raw_material_id', $bijiKopi->id)
+            ->where('raw_material_id', $dagingSapi->id)
             ->first();
 
-        $this->assertEquals($initialStockQty - 36, (float) $updatedStock->current_stock);
+        $this->assertEquals($initialStockQty - 180, (float) $updatedStock->current_stock);
 
         // 3. Verifikasi Mutasi Kartu Stok
         $this->assertDatabaseHas('stock_movements', [
             'outlet_stock_id' => $updatedStock->id,
             'type' => 'SALE',
-            'quantity_delta' => -36,
+            'quantity_delta' => -180,
         ]);
 
         // 4. Verifikasi BusinessDataAggregator (AGENTS.md Rule 4)
-        $aggregator = app(BusinessDataAggregator.php);
+        $aggregator = app(BusinessDataAggregator::class);
         $metrics = $aggregator->aggregateDailyMetrics($tenant->id, $outlet->id);
 
-        $this->assertGreaterThanOrEqual(44000, $metrics['financial']['total_revenue']);
-        $this->assertGreaterThanOrEqual(19420, $metrics['financial']['total_cogs']); // 2 * 9710
-        $this->assertEquals('Kopi Susu Gula Aren', $metrics['top_selling'][0]['name']);
+        $this->assertGreaterThanOrEqual(46000, $metrics['financial']['total_revenue']);
+        $this->assertGreaterThanOrEqual(25000, $metrics['financial']['total_cogs']); // 2 * 12500
+        $this->assertEquals('Soto Daging', $metrics['top_selling'][0]['name']);
     }
 }
 
