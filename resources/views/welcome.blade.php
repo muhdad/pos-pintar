@@ -6,13 +6,14 @@
     <title>SLL - Soto Lamongan Lestari • Smart Cloud POS & AI Resto Consultant</title>
 
     <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800,900&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 
     <!-- Scripts & Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="antialiased font-sans bg-gradient-to-br from-[#fdfbf7] via-[#fff9ee] to-[#fbf5e9] text-stone-800 min-h-screen flex flex-col selection:bg-amber-500 selection:text-white">
+<body class="antialiased font-sans bg-[#F8FAFC] text-slate-800 min-h-screen flex flex-col selection:bg-emerald-500 selection:text-white">
 
     <!-- Top Navigation (Crisp Clean White) -->
     <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-stone-200/80 transition">
@@ -35,23 +36,23 @@
             <div class="flex items-center gap-3">
                 @if (Route::has('login'))
                     @auth
-                        <a href="{{ route('dashboard') }}" class="px-4 py-2 text-xs font-bold text-stone-700 bg-white hover:bg-stone-50 border border-stone-200 rounded-xl transition flex items-center gap-1.5 shadow-2xs">
-                            <svg class="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="{{ route('dashboard') }}" class="px-4 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition flex items-center gap-1.5 shadow-xs">
+                            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                             </svg>
                             <span>Backoffice</span>
                         </a>
-                        <a href="{{ route('pos.index') }}" class="px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 rounded-xl shadow-sm shadow-orange-500/20 transition flex items-center gap-1.5">
+                        <a href="{{ route('pos.index') }}" class="px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition flex items-center gap-1.5">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                             </svg>
                             <span>Layar Kasir (POS)</span>
                         </a>
                     @else
-                        <a href="{{ route('login') }}" class="px-4 py-2 text-xs font-bold text-stone-700 hover:text-amber-700 rounded-xl transition">
+                        <a href="{{ route('login') }}" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-emerald-700 rounded-xl transition">
                             Masuk
                         </a>
-                        <a href="{{ route('login') }}" class="px-4 py-2 text-xs font-black text-white bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 rounded-xl shadow-md shadow-orange-500/20 transition flex items-center gap-1">
+                        <a href="{{ route('login') }}" class="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition flex items-center gap-1">
                             <span>Mulai Sekarang</span>
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -85,14 +86,14 @@
 
                 <!-- CTA Buttons -->
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-3.5 mb-10">
-                    <a href="{{ route('pos.index') }}" class="w-full sm:w-auto px-7 py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white font-black text-sm tracking-wide shadow-lg shadow-orange-500/25 transition flex items-center justify-center gap-2 transform hover:-translate-y-0.5">
+                    <a href="{{ route('pos.index') }}" class="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm tracking-wide shadow-xs transition flex items-center justify-center gap-2 transform hover:-translate-y-0.5">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
                         <span>Buka Layar Kasir (0ms Offline-First)</span>
                     </a>
-                    <a href="{{ route('dashboard') }}" class="w-full sm:w-auto px-7 py-4 rounded-2xl bg-white hover:bg-stone-50 text-stone-800 font-bold text-sm border border-stone-200 shadow-2xs transition flex items-center justify-center gap-2">
-                        <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <a href="{{ route('dashboard') }}" class="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-semibold text-sm border border-slate-200 shadow-xs transition flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
                         <span>Dashboard Backoffice Resto</span>
@@ -100,13 +101,13 @@
                 </div>
 
                 <!-- 1-Click Demo Login Helper -->
-                <div class="inline-flex flex-wrap items-center justify-center gap-2 sm:gap-3 px-5 py-2.5 rounded-2xl bg-white border border-stone-200 text-xs text-stone-600 shadow-xs">
-                    <span class="font-bold text-stone-900">Akun Siap Pakai:</span>
-                    <span>Admin: <code class="text-amber-800 font-mono font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">admin@pospintar.com</code> (PIN 1234)</span>
-                    <span class="text-stone-300 hidden sm:inline">|</span>
-                    <span>Kasir: <code class="text-amber-800 font-mono font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">kasir@sll-lestari.com</code> (PIN 1234)</span>
-                    <span class="text-stone-300 hidden sm:inline">|</span>
-                    <span>Pass: <code class="text-stone-800 font-mono font-bold">admin123</code></span>
+                <div class="inline-flex flex-wrap items-center justify-center gap-2 sm:gap-3 px-5 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs text-slate-600 shadow-xs">
+                    <span class="font-bold text-slate-800">Akun Siap Pakai:</span>
+                    <span>Admin: <code class="text-emerald-800 font-mono font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">admin@sotolamongan.com</code> (PIN 1234)</span>
+                    <span class="text-slate-300 hidden sm:inline">|</span>
+                    <span>Kasir: <code class="text-emerald-800 font-mono font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">kasir@sotolamongan.com</code> (PIN 1234)</span>
+                    <span class="text-slate-300 hidden sm:inline">|</span>
+                    <span>Pass: <code class="text-slate-800 font-mono font-bold">password</code></span>
                 </div>
             </div>
 
