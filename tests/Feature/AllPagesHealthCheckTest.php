@@ -118,6 +118,13 @@ class AllPagesHealthCheckTest extends TestCase
         $response->assertStatus(200);
     }
 
+    public function test_dashboard_excel_export_streams_successfully()
+    {
+        $response = $this->actingAs($this->adminUser)->get('/backoffice/dashboard/export-excel');
+        $response->assertStatus(200);
+        $response->assertHeader('content-type', 'application/vnd.ms-excel; charset=UTF-8');
+    }
+
     public function test_cashflow_excel_export_streams_successfully()
     {
         $response = $this->actingAs($this->adminUser)->get('/backoffice/cashflow/export-excel');

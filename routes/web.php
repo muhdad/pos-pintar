@@ -21,8 +21,10 @@ Route::get('/', function () {
 // Backoffice Routes (Protected by Auth & RBAC: Superadmin, Owner, Manager, Finance)
 Route::middleware(['auth', 'verified', 'role:SUPERADMIN,OWNER,MANAGER,FINANCE'])->group(function () {
     Route::get('/dashboard', [BackofficeController::class, 'dashboard'])->name('dashboard');
+    Route::get('/dashboard/export-excel', [BackofficeController::class, 'exportDashboardExcel'])->name('dashboard.export-excel');
 
     Route::prefix('backoffice')->name('backoffice.')->group(function () {
+        Route::get('/dashboard/export-excel', [BackofficeController::class, 'exportDashboardExcel'])->name('dashboard.export-excel');
         // Katalog Produk & Kategori
         Route::get('/products', [BackofficeController::class, 'products'])->name('products');
         Route::get('/products/export-excel', [BackofficeController::class, 'exportProductsExcel'])->name('products.export-excel');

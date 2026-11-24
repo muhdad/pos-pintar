@@ -7,6 +7,7 @@ use App\Models\AiDailyReport;
 use App\Models\Cashflow;
 use App\Models\Category;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Outlet;
 use App\Models\OutletStock;
 use App\Models\Product;
@@ -20,6 +21,7 @@ use App\Services\Ai\ReceiptOcrService;
 use App\Services\Export\ExcelExportService;
 use App\Services\Pos\InventoryDeductionService;
 use App\Services\Pos\OrderService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -97,6 +99,57 @@ class BackofficeController extends Controller
             }
         }
 
+        // Omset Kemarin (H-1)
+        $yesterday = Carbon::yesterday();
+        $yesterdayStr = $yesterday->toDateString();
+        $yesterdayOrders = Order::where('tenant_id', $tenant->id)
+            ->whereDate('created_at', $yesterdayStr)
+            ->whereIn('status', ['PAID', 'paid'])
+            ->get();
+        $yesterdayRevenue = (float) $yesterdayOrders->sum('final_amount');
+        $yesterdayOrdersCount = $yesterdayOrders->count();
+
+        $todayRevenue = (float) ($metrics['financial']['total_revenue'] ?? 0);
+        $diffYesterday = $todayRevenue - $yesterdayRevenue;
+        $pctYesterday = $yesterdayRevenue > 0 ? round(($diffYesterday / $yesterdayRevenue) * 100, 1) : ($todayRevenue > 0 ? 100.0 : 0.0);
+
+        // Omset 1 Bulan Ini (Month to Date / Bulan Berjalan)
+        $startOfMonth = Carbon::now()->startOfMonth();
+        $endOfMonth = Carbon::now()->endOfDay();
+        $monthOrders = Order::where('tenant_id', $tenant->id)
+            ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+            ->whereIn('status', ['PAID', 'paid'])
+            ->get();
+        $monthRevenue = (float) $monthOrders->sum('final_amount');
+        $monthOrdersCount = $monthOrders->count();
+        $daysInMonthPassed = max(1, (int) Carbon::now()->day);
+        $avgDailyRevenue = round($monthRevenue / $daysInMonthPassed);
+
+        // Estimasi COGS & Laba Kotor Bulan Ini
+        $monthOrderIds = $monthOrders->pluck('id');
+        $monthCogs = 0.0;
+        if ($monthOrderIds->isNotEmpty()) {
+            $monthCogs = (float) OrderItem::whereIn('order_id', $monthOrderIds)->sum(DB::raw('quantity * unit_cost'));
+        }
+        $monthGrossProfit = $monthRevenue - $monthCogs;
+        $monthProfitMarginPct = $monthRevenue > 0 ? round(($monthGrossProfit / $monthRevenue) * 100, 1) : 0;
+
+        // Split Bill / Bagi Hasil (Default 50% Pengelola : 50% Pemodal)
+        $splitBillYesterday = [
+            'total_omset' => $yesterdayRevenue,
+            'share_pengelola' => round($yesterdayRevenue * 0.5),
+            'share_investor' => round($yesterdayRevenue * 0.5),
+        ];
+        $splitBillMonth = [
+            'total_omset' => $monthRevenue,
+            'total_cogs' => $monthCogs,
+            'gross_profit' => $monthGrossProfit,
+            'share_pengelola' => round($monthRevenue * 0.5),
+            'share_investor' => round($monthRevenue * 0.5),
+            'share_profit_pengelola' => round($monthGrossProfit * 0.5),
+            'share_profit_investor' => round($monthGrossProfit * 0.5),
+        ];
+
         return view('dashboard', compact(
             'tenant',
             'outlet',
@@ -106,8 +159,198 @@ class BackofficeController extends Controller
             'lowStockItems',
             'totalProductsCount',
             'totalRawMaterialsCount',
-            'hourlyDistribution'
+            'hourlyDistribution',
+            'yesterdayRevenue',
+            'yesterdayOrdersCount',
+            'diffYesterday',
+            'pctYesterday',
+            'monthRevenue',
+            'monthOrdersCount',
+            'avgDailyRevenue',
+            'monthCogs',
+            'monthGrossProfit',
+            'monthProfitMarginPct',
+            'splitBillYesterday',
+            'splitBillMonth'
         ));
+    }
+
+    /**
+     * Export Laporan Rekap Omset Harian, H-1, Sebulan & Pembagian Hasil (Split Bill) ke Format Excel (.xls).
+     */
+    public function exportDashboardExcel(Request $request, ExcelExportService $excelService): StreamedResponse
+    {
+        $tenant = $request->user()?->tenant ?? Tenant::first();
+        $outlet = $tenant?->outlets()->first() ?? Outlet::first();
+
+        $startOfMonth = Carbon::now()->startOfMonth();
+        $endOfMonth = Carbon::now()->endOfDay();
+        $todayStr = Carbon::today()->toDateString();
+        $yesterdayStr = Carbon::yesterday()->toDateString();
+
+        // Ambil seluruh order berstatus PAID di bulan berjalan
+        $ordersMonth = Order::where('tenant_id', $tenant->id)
+            ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+            ->whereIn('status', ['PAID', 'paid'])
+            ->with(['payments', 'items'])
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        $totalMonthRevenue = (float) $ordersMonth->sum('final_amount');
+        $totalMonthOrders = $ordersMonth->count();
+
+        // Hitung Omset Hari Ini & Kemarin
+        $todayOrders = $ordersMonth->filter(fn ($o) => $o->created_at->format('Y-m-d') === $todayStr);
+        $todayRevenue = (float) $todayOrders->sum('final_amount');
+
+        $yesterdayOrders = $ordersMonth->filter(fn ($o) => $o->created_at->format('Y-m-d') === $yesterdayStr);
+        $yesterdayRevenue = (float) $yesterdayOrders->sum('final_amount');
+
+        // Total COGS dan Laba Kotor Bulan Ini
+        $totalCogsMonth = 0.0;
+        foreach ($ordersMonth as $ord) {
+            foreach ($ord->items as $item) {
+                $totalCogsMonth += ($item->quantity * (float) $item->unit_cost);
+            }
+        }
+        $grossProfitMonth = $totalMonthRevenue - $totalCogsMonth;
+
+        // Split Bill 50%
+        $splitPengelolaMonth = round($totalMonthRevenue * 0.5);
+        $splitInvestorMonth = round($totalMonthRevenue * 0.5);
+        $splitProfitPengelolaMonth = round($grossProfitMonth * 0.5);
+        $splitProfitInvestorMonth = round($grossProfitMonth * 0.5);
+
+        // Siapkan Ringkasan
+        $summary = [
+            'Outlet / Cabang' => $outlet->name ?? 'Cabang Utama',
+            'Periode Laporan' => Carbon::now()->translatedFormat('F Y'),
+            'Omset Hari Ini (' . Carbon::today()->format('d/m/Y') . ')' => 'Rp ' . number_format($todayRevenue, 0, ',', '.'),
+            'Omset Kemarin H-1 (' . Carbon::yesterday()->format('d/m/Y') . ')' => 'Rp ' . number_format($yesterdayRevenue, 0, ',', '.'),
+            'Total Omset Bulan Ini (MTD)' => 'Rp ' . number_format($totalMonthRevenue, 0, ',', '.'),
+            'Total Transaksi Bulan Ini' => number_format($totalMonthOrders, 0, ',', '.') . ' Pesanan',
+            'Estimasi HPP Bahan Baku' => 'Rp ' . number_format($totalCogsMonth, 0, ',', '.'),
+            'Estimasi Laba Kotor Resto' => 'Rp ' . number_format($grossProfitMonth, 0, ',', '.'),
+            'Bagi Hasil 50% Pengelola (Omset)' => 'Rp ' . number_format($splitPengelolaMonth, 0, ',', '.'),
+            'Bagi Hasil 50% Pemodal/Investor (Omset)' => 'Rp ' . number_format($splitInvestorMonth, 0, ',', '.'),
+            'Bagi Hasil 50% Pengelola (Laba Kotor)' => 'Rp ' . number_format($splitProfitPengelolaMonth, 0, ',', '.'),
+            'Bagi Hasil 50% Pemodal/Investor (Laba Kotor)' => 'Rp ' . number_format($splitProfitInvestorMonth, 0, ',', '.'),
+        ];
+
+        // Kelompokkan per tanggal dalam bulan ini
+        $daysGrouped = $ordersMonth->groupBy(fn ($o) => $o->created_at->format('Y-m-d'));
+
+        $headers = [
+            'Tanggal',
+            'Hari',
+            'Jumlah Trx',
+            'Omset Bruto (Rp)',
+            'Pembayaran Tunai (Rp)',
+            'Pembayaran Non-Tunai / QRIS (Rp)',
+            'Estimasi HPP (Rp)',
+            'Laba Kotor (Rp)',
+            'Split 50% Pengelola (Rp)',
+            'Split 50% Pemodal (Rp)',
+        ];
+
+        $rows = [];
+        $sumQty = 0;
+        $sumGross = 0;
+        $sumCash = 0;
+        $sumNonCash = 0;
+        $sumCogs = 0;
+        $sumProfit = 0;
+        $sumSplitPengelola = 0;
+        $sumSplitInvestor = 0;
+
+        // Loop setiap hari dari awal bulan hingga hari ini
+        $currentDate = $startOfMonth->copy();
+        $todayEnd = Carbon::today();
+
+        while ($currentDate->lte($todayEnd)) {
+            $dateKey = $currentDate->toDateString();
+            $dayOrders = $daysGrouped->get($dateKey, collect());
+
+            $dayTrx = $dayOrders->count();
+            $dayGross = (float) $dayOrders->sum('final_amount');
+
+            $dayCash = 0.0;
+            $dayNonCash = 0.0;
+            $dayCogs = 0.0;
+
+            foreach ($dayOrders as $ord) {
+                // Cash vs Non-cash
+                if ($ord->payments && $ord->payments->isNotEmpty()) {
+                    foreach ($ord->payments as $p) {
+                        if ($p->method === 'CASH') {
+                            $dayCash += (float) $p->amount;
+                        } else {
+                            $dayNonCash += (float) $p->amount;
+                        }
+                    }
+                } else {
+                    $dayCash += (float) $ord->final_amount;
+                }
+
+                // COGS
+                foreach ($ord->items as $itm) {
+                    $dayCogs += ($itm->quantity * (float) $itm->unit_cost);
+                }
+            }
+
+            $dayProfit = $dayGross - $dayCogs;
+            $daySplitPengelola = round($dayGross * 0.5);
+            $daySplitInvestor = round($dayGross * 0.5);
+
+            $rows[] = [
+                ['value' => $currentDate->format('d/m/Y'), 'type' => 'center'],
+                ['value' => $currentDate->translatedFormat('l'), 'type' => 'text'],
+                ['value' => $dayTrx, 'type' => 'num'],
+                ['value' => $dayGross, 'type' => 'currency'],
+                ['value' => $dayCash, 'type' => 'currency'],
+                ['value' => $dayNonCash, 'type' => 'currency'],
+                ['value' => $dayCogs, 'type' => 'currency'],
+                ['value' => $dayProfit, 'type' => 'currency'],
+                ['value' => $daySplitPengelola, 'type' => 'currency'],
+                ['value' => $daySplitInvestor, 'type' => 'currency'],
+            ];
+
+            $sumQty += $dayTrx;
+            $sumGross += $dayGross;
+            $sumCash += $dayCash;
+            $sumNonCash += $dayNonCash;
+            $sumCogs += $dayCogs;
+            $sumProfit += $dayProfit;
+            $sumSplitPengelola += $daySplitPengelola;
+            $sumSplitInvestor += $daySplitInvestor;
+
+            $currentDate->addDay();
+        }
+
+        $totals = [
+            'TOTAL BULAN BERJALAN',
+            '',
+            ['value' => $sumQty, 'type' => 'num'],
+            ['value' => $sumGross, 'type' => 'currency'],
+            ['value' => $sumCash, 'type' => 'currency'],
+            ['value' => $sumNonCash, 'type' => 'currency'],
+            ['value' => $sumCogs, 'type' => 'currency'],
+            ['value' => $sumProfit, 'type' => 'currency'],
+            ['value' => $sumSplitPengelola, 'type' => 'currency'],
+            ['value' => $sumSplitInvestor, 'type' => 'currency'],
+        ];
+
+        $filename = 'Laporan_Omset_SplitBill_' . Carbon::now()->format('Ymd_His') . '.xls';
+
+        return $excelService->download(
+            filename: $filename,
+            title: 'LAPORAN REKAP OMSET & BAGI HASIL (SPLIT BILL) — SOTO LAMONGAN LESTARI',
+            subtitle: 'Periode Bulan: ' . Carbon::now()->translatedFormat('F Y') . ' | Dicetak: ' . Carbon::now()->format('d/m/Y H:i'),
+            summary: $summary,
+            headers: $headers,
+            rows: $rows,
+            totals: $totals
+        );
     }
 
     /**
