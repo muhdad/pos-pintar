@@ -35,17 +35,15 @@
                     <span>Export Excel Split Bill</span>
                 </a>
 
-                <!-- Perbarui AI Data -->
-                <form method="POST" action="{{ route('backoffice.ai-consultant.generate') }}">
-                    @csrf
-                    <button type="submit" 
-                            class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-xs transition flex items-center gap-1.5">
-                        <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        <span>Perbarui AI</span>
-                    </button>
-                </form>
+                <!-- Restock Bahan Cepat -->
+                <a href="{{ route('backoffice.restock') }}" 
+                   class="px-3.5 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-semibold shadow-xs transition flex items-center gap-1.5"
+                   title="Restock Bahan Baku & Pembelian Pasar">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    <span>+ Restock Bahan</span>
+                </a>
 
                 <!-- Buka Layar Kasir -->
                 <a href="{{ route('pos.index') }}" 
@@ -102,7 +100,7 @@
                 </div>
             </div>
 
-            <!-- KPI 3: Omset Sebulan (Bulan Berjalan / MTD) -->
+            <!-- KPI 3: Omset Sebulan & Belanja Restock (MTD) -->
             <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between">
                 <div>
                     <div class="flex items-center justify-between">
@@ -113,9 +111,9 @@
                         Rp{{ number_format($monthRevenue ?? 0, 0, ',', '.') }}
                     </div>
                 </div>
-                <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                    <span>{{ $monthOrdersCount ?? 0 }} Trx</span>
-                    <span class="font-mono tabular-nums font-semibold text-slate-700">Rata-rata: Rp{{ number_format($avgDailyRevenue ?? 0, 0, ',', '.') }}/hr</span>
+                <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                    <span class="text-rose-600 font-semibold" title="Total Belanja Restock Bahan Bulan Ini">Restock: -Rp{{ number_format($monthRestockExpense ?? 0, 0, ',', '.') }}</span>
+                    <span class="font-mono tabular-nums font-bold text-emerald-700" title="Omset Bersih setelah dipotong belanja bahan">Bersih: Rp{{ number_format($monthNetRevenue ?? 0, 0, ',', '.') }}</span>
                 </div>
             </div>
 
@@ -123,7 +121,7 @@
             <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between">
                 <div>
                     <div class="flex items-center justify-between">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Bagi Hasil 50% (Bulan Ini)</span>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Bagi Hasil 50% (Omset Bersih)</span>
                         <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-lg bg-emerald-50 text-emerald-700">50 : 50</span>
                     </div>
                     <div class="text-xl font-bold text-emerald-700 font-mono tabular-nums mt-1">
@@ -148,7 +146,7 @@
                         </h2>
                     </div>
                     <p class="text-xs text-slate-500 mt-0.5">
-                        Alokasi pembagian hasil berdasarkan omset kotor dan estimasi laba kotor untuk H-1 (Kemarin) dan 1 Bulan Ini.
+                        Alokasi pembagian hasil transparan: Omset kotor dipotong biaya belanja restock bahan dan operasional untuk menghasilkan laba bersih.
                     </p>
                 </div>
 
@@ -170,9 +168,19 @@
                         <span class="text-[10px] font-mono text-slate-400">{{ \Carbon\Carbon::yesterday()->translatedFormat('d F Y') }}</span>
                     </div>
 
-                    <div class="p-3 bg-white rounded-xl border border-slate-200/80 flex justify-between items-center">
-                        <span class="text-xs text-slate-600">Total Omset H-1:</span>
-                        <span class="text-sm font-bold text-slate-800 font-mono tabular-nums">Rp{{ number_format($yesterdayRevenue ?? 0, 0, ',', '.') }}</span>
+                    <div class="p-3 bg-white rounded-xl border border-slate-200/80 space-y-1.5 text-xs">
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600">Total Omset Kotor H-1:</span>
+                            <span class="font-bold text-slate-800 font-mono tabular-nums">Rp{{ number_format($yesterdayRevenue ?? 0, 0, ',', '.') }}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-slate-500">
+                            <span>Belanja Restock Kemarin:</span>
+                            <span class="font-mono tabular-nums text-rose-600">-Rp{{ number_format($splitBillYesterday['restock_expense'] ?? 0, 0, ',', '.') }}</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-1 border-t border-slate-100 font-semibold">
+                            <span class="text-slate-700">Omset Bersih H-1:</span>
+                            <span class="text-emerald-700 font-mono tabular-nums">Rp{{ number_format($splitBillYesterday['net_revenue'] ?? 0, 0, ',', '.') }}</span>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-2 text-xs">
@@ -181,12 +189,14 @@
                             <span class="text-sm font-bold text-emerald-700 font-mono tabular-nums block mt-1">
                                 Rp{{ number_format($splitBillYesterday['share_pengelola'] ?? 0, 0, ',', '.') }}
                             </span>
+                            <span class="text-[9px] text-slate-400 block mt-0.5">Dari Omset Kotor: Rp{{ number_format($splitBillYesterday['gross_share_pengelola'] ?? 0, 0, ',', '.') }}</span>
                         </div>
                         <div class="p-3 rounded-xl bg-indigo-50/80 border border-indigo-200/80">
                             <span class="text-[10px] font-semibold text-indigo-800 block">Porsi Pemodal / Owner (50%)</span>
                             <span class="text-sm font-bold text-indigo-700 font-mono tabular-nums block mt-1">
                                 Rp{{ number_format($splitBillYesterday['share_investor'] ?? 0, 0, ',', '.') }}
                             </span>
+                            <span class="text-[9px] text-slate-400 block mt-0.5">Dari Omset Kotor: Rp{{ number_format($splitBillYesterday['gross_share_investor'] ?? 0, 0, ',', '.') }}</span>
                         </div>
                     </div>
                 </div>
@@ -200,33 +210,37 @@
 
                     <div class="p-3 bg-white rounded-xl border border-slate-200/80 space-y-1.5 text-xs">
                         <div class="flex justify-between">
-                            <span class="text-slate-500">Omset Bruto Bulan Ini:</span>
+                            <span class="text-slate-500">Omset Kotor Bulan Ini:</span>
                             <span class="font-bold text-slate-800 font-mono tabular-nums">Rp{{ number_format($monthRevenue ?? 0, 0, ',', '.') }}</span>
                         </div>
                         <div class="flex justify-between text-slate-500">
-                            <span>Estimasi HPP Bahan Baku:</span>
-                            <span class="font-mono tabular-nums text-rose-600">-Rp{{ number_format($monthCogs ?? 0, 0, ',', '.') }}</span>
+                            <span>Total Belanja Restock Bahan:</span>
+                            <span class="font-mono tabular-nums text-rose-600">-Rp{{ number_format($monthRestockExpense ?? 0, 0, ',', '.') }}</span>
+                        </div>
+                        <div class="flex justify-between text-slate-500">
+                            <span>Biaya Operasional Toko:</span>
+                            <span class="font-mono tabular-nums text-rose-600">-Rp{{ number_format($monthOperationalExpense ?? 0, 0, ',', '.') }}</span>
                         </div>
                         <div class="flex justify-between pt-1 border-t border-slate-100 font-semibold">
-                            <span class="text-slate-700">Estimasi Laba Kotor Resto:</span>
-                            <span class="text-emerald-700 font-mono tabular-nums">Rp{{ number_format($monthGrossProfit ?? 0, 0, ',', '.') }} ({{ $monthProfitMarginPct ?? 0 }}%)</span>
+                            <span class="text-slate-700">Omset Bersih Siap Bagi:</span>
+                            <span class="text-emerald-700 font-mono tabular-nums">Rp{{ number_format($monthNetRevenue ?? 0, 0, ',', '.') }}</span>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-2 text-xs">
                         <div class="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200/80">
-                            <span class="text-[10px] font-semibold text-emerald-800 block">Split 50% Pengelola (Omset)</span>
+                            <span class="text-[10px] font-semibold text-emerald-800 block">Split 50% Pengelola (Net)</span>
                             <span class="text-sm font-bold text-emerald-700 font-mono tabular-nums block mt-1">
                                 Rp{{ number_format($splitBillMonth['share_pengelola'] ?? 0, 0, ',', '.') }}
                             </span>
-                            <span class="text-[9px] text-emerald-600 block mt-0.5">Laba: Rp{{ number_format($splitBillMonth['share_profit_pengelola'] ?? 0, 0, ',', '.') }}</span>
+                            <span class="text-[9px] text-slate-400 block mt-0.5">Dari Kotor: Rp{{ number_format($splitBillMonth['gross_share_pengelola'] ?? 0, 0, ',', '.') }}</span>
                         </div>
                         <div class="p-3 rounded-xl bg-indigo-50/80 border border-indigo-200/80">
-                            <span class="text-[10px] font-semibold text-indigo-800 block">Split 50% Pemodal (Omset)</span>
+                            <span class="text-[10px] font-semibold text-indigo-800 block">Split 50% Pemodal (Net)</span>
                             <span class="text-sm font-bold text-indigo-700 font-mono tabular-nums block mt-1">
                                 Rp{{ number_format($splitBillMonth['share_investor'] ?? 0, 0, ',', '.') }}
                             </span>
-                            <span class="text-[9px] text-indigo-600 block mt-0.5">Laba: Rp{{ number_format($splitBillMonth['share_profit_investor'] ?? 0, 0, ',', '.') }}</span>
+                            <span class="text-[9px] text-slate-400 block mt-0.5">Dari Kotor: Rp{{ number_format($splitBillMonth['gross_share_investor'] ?? 0, 0, ',', '.') }}</span>
                         </div>
                     </div>
                 </div>
@@ -235,29 +249,48 @@
 
         <!-- 4. Primary Workspace Grid (12 Columns) -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            <!-- Left Column: AI Operational Note + Recent Orders Table (7 cols) -->
+            <!-- Left Column: Aktivitas Restock & Recent Orders Table (7 cols) -->
             <div class="lg:col-span-7 space-y-5">
-                <!-- AI Resto Operational Note -->
+                <!-- Aktivitas Restock Bahan Terkini (Pengganti AI) -->
                 <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs">
                     <div class="flex items-center justify-between pb-2.5 border-b border-slate-100">
                         <div class="flex items-center gap-2">
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 font-mono uppercase tracking-wider">AI Resto Advisor</span>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 font-mono uppercase tracking-wider">Restock Bahan</span>
                             <span class="text-xs text-slate-500">
-                                @if($latestAiReport)
-                                    Evaluasi: {{ \Carbon\Carbon::parse($latestAiReport->report_date)->translatedFormat('d M Y') }}
-                                @else
-                                    Evaluasi Harian Real-Time
-                                @endif
+                                Total Belanja Bulan Ini: <strong class="text-slate-800 font-mono">Rp{{ number_format($monthRestockExpense ?? 0, 0, ',', '.') }}</strong>
                             </span>
                         </div>
-                        <a href="{{ route('backoffice.ai-consultant') }}" class="text-[11px] font-semibold text-emerald-700 hover:underline">
-                            Lihat Rekomendasi Lengkap &rarr;
+                        <a href="{{ route('backoffice.restock') }}" class="text-[11px] font-semibold text-emerald-700 hover:underline flex items-center gap-1">
+                            <span>+ Restock Bahan</span> &rarr;
                         </a>
                     </div>
-                    <div class="pt-2.5">
-                        <p class="text-xs text-slate-700 leading-relaxed font-medium">
-                            {{ $latestAiReport->ai_insights['executive_summary'] ?? 'Soto Lamongan Lestari mencatatkan margin operasional yang sehat. Kombinasi menu Soto Ayam Campur Nasi dan Mie Ayam menjadi kontributor omzet tertinggi. Pastikan ketersediaan daging sapi dan koya udang terjaga untuk jam makan siang.' }}
-                        </p>
+                    <div class="pt-3">
+                        @if(!empty($recentRestocks) && $recentRestocks->isNotEmpty())
+                            <div class="divide-y divide-slate-100">
+                                @foreach($recentRestocks as $movement)
+                                    <div class="py-2 flex items-center justify-between text-xs">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-[10px]">
+                                                📦
+                                            </span>
+                                            <div>
+                                                <span class="font-bold text-slate-800 block">{{ $movement->outletStock?->rawMaterial?->name ?? 'Bahan Baku' }}</span>
+                                                <span class="text-[10px] text-slate-400">{{ $movement->notes }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="font-bold text-emerald-700 font-mono">+{{ number_format($movement->quantity_delta, 0, ',', '.') }} {{ $movement->outletStock?->rawMaterial?->unit ?? 'gr' }}</span>
+                                            <span class="text-[10px] text-slate-400 block">{{ $movement->created_at?->diffForHumans() }}</span>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="text-center py-4 text-slate-400 text-xs">
+                                Belum ada riwayat restock bahan bulan ini.
+                                <a href="{{ route('backoffice.restock') }}" class="text-emerald-600 font-semibold hover:underline block mt-1">Lakukan Restock Sekarang</a>
+                            </div>
+                        @endif
                     </div>
                 </div>
 

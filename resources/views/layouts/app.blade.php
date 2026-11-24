@@ -138,15 +138,15 @@
                     </div>
                     @endif
 
-                    <!-- Group 4: Analitik -->
+                    <!-- Group 4: Restock Bahan -->
                     <div class="space-y-1">
-                        <span class="px-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">ANALITIK RESTO</span>
-                        <a href="{{ route('backoffice.ai-consultant') }}" 
-                           class="flex items-center gap-2.5 px-3 py-2 text-xs rounded-xl transition {{ request()->routeIs('backoffice.ai-consultant*') ? 'bg-white/10 text-white font-semibold border border-white/10 shadow-xs' : 'text-slate-400 hover:text-white hover:bg-slate-800/60' }}">
+                        <span class="px-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">PEMBELIAN BAHAN</span>
+                        <a href="{{ route('backoffice.restock') }}" 
+                           class="flex items-center gap-2.5 px-3 py-2 text-xs rounded-xl transition {{ request()->routeIs('backoffice.restock*') ? 'bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30 shadow-xs' : 'text-slate-400 hover:text-white hover:bg-slate-800/60' }}">
                             <svg class="w-4 h-4 text-inherit" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                             </svg>
-                            <span>Konsultan AI</span>
+                            <span>Restock Bahan (Konversi)</span>
                         </a>
                     </div>
 

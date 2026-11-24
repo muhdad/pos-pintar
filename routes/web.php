@@ -64,9 +64,9 @@ Route::middleware(['auth', 'verified', 'role:SUPERADMIN,OWNER,MANAGER,FINANCE'])
             Route::delete('/cashflow/{cashflow}', [CashflowController::class, 'destroy'])->name('cashflow.destroy');
         });
 
-        // AI Business Consultant
-        Route::get('/ai-consultant', [BackofficeController::class, 'aiConsultant'])->name('ai-consultant');
-        Route::post('/ai-consultant/generate', [BackofficeController::class, 'triggerAiReport'])->name('ai-consultant.generate');
+        // Restock Bahan Baku & Pembelian Pasar (Auto Konversi Satuan & Pemotong Omset)
+        Route::get('/restock', [BackofficeController::class, 'restock'])->name('restock');
+        Route::post('/restock', [BackofficeController::class, 'storeRestock'])->name('restock.store');
 
         // Reset Data Dummy
         Route::post('/reset-dummy-data', [BackofficeController::class, 'resetDummyData'])->name('reset-dummy-data');

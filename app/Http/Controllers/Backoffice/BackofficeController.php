@@ -19,6 +19,7 @@ use App\Services\Ai\AiConsultantService;
 use App\Services\Ai\BusinessDataAggregator;
 use App\Services\Ai\ReceiptOcrService;
 use App\Services\Export\ExcelExportService;
+use App\Services\Inventory\RestockService;
 use App\Services\Pos\InventoryDeductionService;
 use App\Services\Pos\OrderService;
 use Carbon\Carbon;
@@ -125,6 +126,23 @@ class BackofficeController extends Controller
         $daysInMonthPassed = max(1, (int) Carbon::now()->day);
         $avgDailyRevenue = round($monthRevenue / $daysInMonthPassed);
 
+        // Belanja Restock Bahan Bulan Ini (Pengeluaran Riil Pembelian Bahan Baku)
+        $monthRestockExpense = (float) Cashflow::where('outlet_id', $outlet->id)
+            ->whereBetween('transaction_date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
+            ->where('type', 'OUTFLOW')
+            ->where('category', 'RESTOCK_PURCHASE')
+            ->sum('amount');
+
+        // Pengeluaran Operasional Lain Bulan Ini (Gaji, Listrik, Operasional Toko)
+        $monthOperationalExpense = (float) Cashflow::where('outlet_id', $outlet->id)
+            ->whereBetween('transaction_date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
+            ->where('type', 'OUTFLOW')
+            ->where('category', '!=', 'RESTOCK_PURCHASE')
+            ->sum('amount');
+
+        $monthTotalExpense = $monthRestockExpense + $monthOperationalExpense;
+        $monthNetRevenue = $monthRevenue - $monthTotalExpense;
+
         // Estimasi COGS & Laba Kotor Bulan Ini
         $monthOrderIds = $monthOrders->pluck('id');
         $monthCogs = 0.0;
@@ -134,21 +152,48 @@ class BackofficeController extends Controller
         $monthGrossProfit = $monthRevenue - $monthCogs;
         $monthProfitMarginPct = $monthRevenue > 0 ? round(($monthGrossProfit / $monthRevenue) * 100, 1) : 0;
 
+        // Belanja Restock Kemarin H-1
+        $yesterdayRestockExpense = (float) Cashflow::where('outlet_id', $outlet->id)
+            ->whereDate('transaction_date', $yesterdayStr)
+            ->where('type', 'OUTFLOW')
+            ->where('category', 'RESTOCK_PURCHASE')
+            ->sum('amount');
+        $yesterdayNetRevenue = $yesterdayRevenue - $yesterdayRestockExpense;
+
         // Split Bill / Bagi Hasil (Default 50% Pengelola : 50% Pemodal)
         $splitBillYesterday = [
             'total_omset' => $yesterdayRevenue,
-            'share_pengelola' => round($yesterdayRevenue * 0.5),
-            'share_investor' => round($yesterdayRevenue * 0.5),
+            'restock_expense' => $yesterdayRestockExpense,
+            'net_revenue' => $yesterdayNetRevenue,
+            'share_pengelola' => round(max(0, $yesterdayNetRevenue) * 0.5),
+            'share_investor' => round(max(0, $yesterdayNetRevenue) * 0.5),
+            'gross_share_pengelola' => round($yesterdayRevenue * 0.5),
+            'gross_share_investor' => round($yesterdayRevenue * 0.5),
         ];
         $splitBillMonth = [
             'total_omset' => $monthRevenue,
+            'restock_expense' => $monthRestockExpense,
+            'operational_expense' => $monthOperationalExpense,
+            'total_expense' => $monthTotalExpense,
+            'net_revenue' => $monthNetRevenue,
             'total_cogs' => $monthCogs,
             'gross_profit' => $monthGrossProfit,
-            'share_pengelola' => round($monthRevenue * 0.5),
-            'share_investor' => round($monthRevenue * 0.5),
-            'share_profit_pengelola' => round($monthGrossProfit * 0.5),
-            'share_profit_investor' => round($monthGrossProfit * 0.5),
+            // Bagi Hasil dari Omset Bersih (Setelah dipotong belanja restock & operasional)
+            'share_pengelola' => round(max(0, $monthNetRevenue) * 0.5),
+            'share_investor' => round(max(0, $monthNetRevenue) * 0.5),
+            // Bagi Hasil dari Omset Kotor (Gross Sales)
+            'gross_share_pengelola' => round($monthRevenue * 0.5),
+            'gross_share_investor' => round($monthRevenue * 0.5),
         ];
+
+        // 5 Restock Terakhir untuk Widget Dashboard
+        $outletStockIds = OutletStock::where('outlet_id', $outlet->id)->pluck('id');
+        $recentRestocks = StockMovement::whereIn('outlet_stock_id', $outletStockIds)
+            ->where('type', 'IN')
+            ->with('outletStock.rawMaterial')
+            ->latest()
+            ->limit(5)
+            ->get();
 
         return view('dashboard', compact(
             'tenant',
@@ -167,11 +212,16 @@ class BackofficeController extends Controller
             'monthRevenue',
             'monthOrdersCount',
             'avgDailyRevenue',
+            'monthRestockExpense',
+            'monthOperationalExpense',
+            'monthTotalExpense',
+            'monthNetRevenue',
             'monthCogs',
             'monthGrossProfit',
             'monthProfitMarginPct',
             'splitBillYesterday',
-            'splitBillMonth'
+            'splitBillMonth',
+            'recentRestocks'
         ));
     }
 
@@ -206,35 +256,32 @@ class BackofficeController extends Controller
         $yesterdayOrders = $ordersMonth->filter(fn ($o) => $o->created_at->format('Y-m-d') === $yesterdayStr);
         $yesterdayRevenue = (float) $yesterdayOrders->sum('final_amount');
 
-        // Total COGS dan Laba Kotor Bulan Ini
-        $totalCogsMonth = 0.0;
-        foreach ($ordersMonth as $ord) {
-            foreach ($ord->items as $item) {
-                $totalCogsMonth += ($item->quantity * (float) $item->unit_cost);
-            }
-        }
-        $grossProfitMonth = $totalMonthRevenue - $totalCogsMonth;
+        // Total Restock Bahan dan Pengeluaran Bulan Ini
+        $totalRestockMonth = (float) Cashflow::where('outlet_id', $outlet->id)
+            ->whereBetween('transaction_date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
+            ->where('type', 'OUTFLOW')
+            ->where('category', 'RESTOCK_PURCHASE')
+            ->sum('amount');
+        $totalNetRevenueMonth = $totalMonthRevenue - $totalRestockMonth;
 
         // Split Bill 50%
         $splitPengelolaMonth = round($totalMonthRevenue * 0.5);
         $splitInvestorMonth = round($totalMonthRevenue * 0.5);
-        $splitProfitPengelolaMonth = round($grossProfitMonth * 0.5);
-        $splitProfitInvestorMonth = round($grossProfitMonth * 0.5);
+        $splitNetPengelolaMonth = round(max(0, $totalNetRevenueMonth) * 0.5);
+        $splitNetInvestorMonth = round(max(0, $totalNetRevenueMonth) * 0.5);
 
         // Siapkan Ringkasan
         $summary = [
             'Outlet / Cabang' => $outlet->name ?? 'Cabang Utama',
             'Periode Laporan' => Carbon::now()->translatedFormat('F Y'),
-            'Omset Hari Ini (' . Carbon::today()->format('d/m/Y') . ')' => 'Rp ' . number_format($todayRevenue, 0, ',', '.'),
-            'Omset Kemarin H-1 (' . Carbon::yesterday()->format('d/m/Y') . ')' => 'Rp ' . number_format($yesterdayRevenue, 0, ',', '.'),
-            'Total Omset Bulan Ini (MTD)' => 'Rp ' . number_format($totalMonthRevenue, 0, ',', '.'),
+            'Total Omset Kotor (MTD)' => 'Rp ' . number_format($totalMonthRevenue, 0, ',', '.'),
+            'Total Belanja Restock Bahan' => 'Rp ' . number_format($totalRestockMonth, 0, ',', '.'),
+            'Omset Bersih Setelah Restock' => 'Rp ' . number_format($totalNetRevenueMonth, 0, ',', '.'),
             'Total Transaksi Bulan Ini' => number_format($totalMonthOrders, 0, ',', '.') . ' Pesanan',
-            'Estimasi HPP Bahan Baku' => 'Rp ' . number_format($totalCogsMonth, 0, ',', '.'),
-            'Estimasi Laba Kotor Resto' => 'Rp ' . number_format($grossProfitMonth, 0, ',', '.'),
-            'Bagi Hasil 50% Pengelola (Omset)' => 'Rp ' . number_format($splitPengelolaMonth, 0, ',', '.'),
-            'Bagi Hasil 50% Pemodal/Investor (Omset)' => 'Rp ' . number_format($splitInvestorMonth, 0, ',', '.'),
-            'Bagi Hasil 50% Pengelola (Laba Kotor)' => 'Rp ' . number_format($splitProfitPengelolaMonth, 0, ',', '.'),
-            'Bagi Hasil 50% Pemodal/Investor (Laba Kotor)' => 'Rp ' . number_format($splitProfitInvestorMonth, 0, ',', '.'),
+            'Bagi Hasil 50% Pengelola (Omset Bersih)' => 'Rp ' . number_format($splitNetPengelolaMonth, 0, ',', '.'),
+            'Bagi Hasil 50% Pemodal (Omset Bersih)' => 'Rp ' . number_format($splitNetInvestorMonth, 0, ',', '.'),
+            'Bagi Hasil 50% Pengelola (Omset Kotor)' => 'Rp ' . number_format($splitPengelolaMonth, 0, ',', '.'),
+            'Bagi Hasil 50% Pemodal (Omset Kotor)' => 'Rp ' . number_format($splitInvestorMonth, 0, ',', '.'),
         ];
 
         // Kelompokkan per tanggal dalam bulan ini
@@ -244,11 +291,11 @@ class BackofficeController extends Controller
             'Tanggal',
             'Hari',
             'Jumlah Trx',
-            'Omset Bruto (Rp)',
-            'Pembayaran Tunai (Rp)',
-            'Pembayaran Non-Tunai / QRIS (Rp)',
-            'Estimasi HPP (Rp)',
-            'Laba Kotor (Rp)',
+            'Omset Kotor (Rp)',
+            'Tunai (Rp)',
+            'Non-Tunai / QRIS (Rp)',
+            'Belanja Restock (Rp)',
+            'Omset Bersih (Rp)',
             'Split 50% Pengelola (Rp)',
             'Split 50% Pemodal (Rp)',
         ];
@@ -258,8 +305,8 @@ class BackofficeController extends Controller
         $sumGross = 0;
         $sumCash = 0;
         $sumNonCash = 0;
-        $sumCogs = 0;
-        $sumProfit = 0;
+        $sumRestock = 0;
+        $sumNet = 0;
         $sumSplitPengelola = 0;
         $sumSplitInvestor = 0;
 
@@ -276,7 +323,6 @@ class BackofficeController extends Controller
 
             $dayCash = 0.0;
             $dayNonCash = 0.0;
-            $dayCogs = 0.0;
 
             foreach ($dayOrders as $ord) {
                 // Cash vs Non-cash
@@ -291,16 +337,18 @@ class BackofficeController extends Controller
                 } else {
                     $dayCash += (float) $ord->final_amount;
                 }
-
-                // COGS
-                foreach ($ord->items as $itm) {
-                    $dayCogs += ($itm->quantity * (float) $itm->unit_cost);
-                }
             }
 
-            $dayProfit = $dayGross - $dayCogs;
-            $daySplitPengelola = round($dayGross * 0.5);
-            $daySplitInvestor = round($dayGross * 0.5);
+            // Pengeluaran Belanja Restock Bahan pada tanggal ini
+            $dayRestock = (float) Cashflow::where('outlet_id', $outlet->id)
+                ->whereDate('transaction_date', $dateKey)
+                ->where('type', 'OUTFLOW')
+                ->where('category', 'RESTOCK_PURCHASE')
+                ->sum('amount');
+
+            $dayNet = $dayGross - $dayRestock;
+            $daySplitPengelola = round(max(0, $dayNet) * 0.5);
+            $daySplitInvestor = round(max(0, $dayNet) * 0.5);
 
             $rows[] = [
                 ['value' => $currentDate->format('d/m/Y'), 'type' => 'center'],
@@ -309,8 +357,8 @@ class BackofficeController extends Controller
                 ['value' => $dayGross, 'type' => 'currency'],
                 ['value' => $dayCash, 'type' => 'currency'],
                 ['value' => $dayNonCash, 'type' => 'currency'],
-                ['value' => $dayCogs, 'type' => 'currency'],
-                ['value' => $dayProfit, 'type' => 'currency'],
+                ['value' => $dayRestock, 'type' => 'currency'],
+                ['value' => $dayNet, 'type' => 'currency'],
                 ['value' => $daySplitPengelola, 'type' => 'currency'],
                 ['value' => $daySplitInvestor, 'type' => 'currency'],
             ];
@@ -319,8 +367,8 @@ class BackofficeController extends Controller
             $sumGross += $dayGross;
             $sumCash += $dayCash;
             $sumNonCash += $dayNonCash;
-            $sumCogs += $dayCogs;
-            $sumProfit += $dayProfit;
+            $sumRestock += $dayRestock;
+            $sumNet += $dayNet;
             $sumSplitPengelola += $daySplitPengelola;
             $sumSplitInvestor += $daySplitInvestor;
 
@@ -334,8 +382,8 @@ class BackofficeController extends Controller
             ['value' => $sumGross, 'type' => 'currency'],
             ['value' => $sumCash, 'type' => 'currency'],
             ['value' => $sumNonCash, 'type' => 'currency'],
-            ['value' => $sumCogs, 'type' => 'currency'],
-            ['value' => $sumProfit, 'type' => 'currency'],
+            ['value' => $sumRestock, 'type' => 'currency'],
+            ['value' => $sumNet, 'type' => 'currency'],
             ['value' => $sumSplitPengelola, 'type' => 'currency'],
             ['value' => $sumSplitInvestor, 'type' => 'currency'],
         ];
@@ -754,39 +802,81 @@ class BackofficeController extends Controller
     }
 
     /**
-     * AI Business Consultant Chat & Detailed Insights.
+     * Halaman Fitur Restock Bahan Baku Cerdas & Riwayat Belanja.
      */
-    public function aiConsultant(Request $request): View
+    public function restock(Request $request): View
     {
         $tenant = $request->user()?->tenant ?? Tenant::first();
         $outlet = $tenant?->outlets()->first() ?? Outlet::first();
 
-        $todayStr = date('Y-m-d');
-        $latestReport = AiDailyReport::where('tenant_id', $tenant->id)
-            ->where('report_date', $todayStr)
-            ->whereNull('outlet_id')
-            ->first();
+        $rawMaterials = RawMaterial::where('tenant_id', $tenant->id)
+            ->with(['outletStocks' => fn ($q) => $q->where('outlet_id', $outlet->id)])
+            ->orderBy('name', 'asc')
+            ->get();
 
-        if (! $latestReport) {
-            $latestReport = $this->consultantService->generateDailyReport($tenant->id, null, $todayStr);
-        }
+        $outletStockIds = OutletStock::where('outlet_id', $outlet->id)->pluck('id');
+        $movements = StockMovement::whereIn('outlet_stock_id', $outletStockIds)
+            ->where('type', 'IN')
+            ->with('outletStock.rawMaterial')
+            ->latest()
+            ->paginate(15);
 
-        $metrics = $this->aggregator->aggregateDailyMetrics($tenant->id, null, $todayStr);
+        $startOfMonth = Carbon::now()->startOfMonth()->toDateString();
+        $todayStr = Carbon::today()->toDateString();
 
-        return view('backoffice.ai-consultant', compact('tenant', 'outlet', 'latestReport', 'metrics'));
+        $totalMonthRestock = (float) Cashflow::where('outlet_id', $outlet->id)
+            ->whereBetween('transaction_date', [$startOfMonth, $todayStr])
+            ->where('type', 'OUTFLOW')
+            ->where('category', 'RESTOCK_PURCHASE')
+            ->sum('amount');
+
+        $totalTodayRestock = (float) Cashflow::where('outlet_id', $outlet->id)
+            ->whereDate('transaction_date', $todayStr)
+            ->where('type', 'OUTFLOW')
+            ->where('category', 'RESTOCK_PURCHASE')
+            ->sum('amount');
+
+        return view('backoffice.restock.index', compact(
+            'tenant',
+            'outlet',
+            'rawMaterials',
+            'movements',
+            'totalMonthRestock',
+            'totalTodayRestock'
+        ));
     }
 
     /**
-     * Trigger Pembuatan Ulang Insight AI secara Live.
+     * Simpan Transaksi Restock Bahan Baku dengan Konversi Satuan Otomatis.
      */
-    public function triggerAiReport(Request $request): RedirectResponse
+    public function storeRestock(Request $request, RestockService $restockService): RedirectResponse
     {
         $tenant = $request->user()?->tenant ?? Tenant::first();
         $outlet = $tenant?->outlets()->first() ?? Outlet::first();
 
-        $this->consultantService->generateDailyReport($tenant->id, null, date('Y-m-d'));
+        $validated = $request->validate([
+            'raw_material_id' => 'required|exists:raw_materials,id',
+            'purchase_quantity' => 'required|numeric|min:0.0001',
+            'purchase_unit' => 'required|string|max:50',
+            'custom_conversion_factor' => 'nullable|numeric|min:0.0001',
+            'total_price' => 'required|numeric|min:0',
+            'supplier_name' => 'nullable|string|max:150',
+            'source_account' => 'required|string|in:CASH_DRAWER,BANK_ACCOUNT,PETTY_CASH',
+            'transaction_date' => 'required|date',
+            'notes' => 'nullable|string|max:255',
+            'record_cashflow' => 'nullable',
+        ]);
 
-        return back()->with('status', 'Insight bisnis AI berhasil diperbarui!');
+        $result = $restockService->executeRestock(
+            $validated,
+            $outlet->id,
+            $tenant->id,
+            $request->user()?->id
+        );
+
+        $msg = "Restock {$result['material_name']} berhasil! Ditambahkan +{$result['converted_qty']} {$result['system_unit']} (Beli: {$result['purchase_qty']} {$result['purchase_unit']}, Rp " . number_format($result['total_price'], 0, ',', '.') . "). Stok kini: {$result['new_stock']} {$result['system_unit']}.";
+
+        return redirect()->route('backoffice.restock')->with('status', $msg);
     }
 
     /**

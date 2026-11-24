@@ -100,10 +100,50 @@ class AllPagesHealthCheckTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_ai_consultant_page_loads_successfully()
+    public function test_restock_page_loads_successfully()
     {
-        $response = $this->actingAs($this->adminUser)->get('/backoffice/ai-consultant');
+        $response = $this->actingAs($this->adminUser)->get('/backoffice/restock');
         $response->assertStatus(200);
+    }
+
+    public function test_can_restock_with_unit_conversion_and_cashflow_deduction()
+    {
+        $material = \App\Models\RawMaterial::create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Daging Sapi Test',
+            'unit' => 'gram',
+            'average_cost' => 100,
+            'minimum_stock' => 500,
+        ]);
+
+        $response = $this->actingAs($this->adminUser)->post('/backoffice/restock', [
+            'raw_material_id' => $material->id,
+            'purchase_quantity' => 1,
+            'purchase_unit' => 'kg',
+            'total_price' => 120000,
+            'supplier_name' => 'Pasar Pagi',
+            'source_account' => 'CASH_DRAWER',
+            'transaction_date' => now()->toDateString(),
+            'record_cashflow' => 1,
+        ]);
+
+        $response->assertRedirect(route('backoffice.restock'));
+        $response->assertSessionHas('status');
+
+        // Verifikasi stok bertambah 1 kg = 1000 gr
+        $stock = \App\Models\OutletStock::where('outlet_id', $this->outlet->id)
+            ->where('raw_material_id', $material->id)
+            ->first();
+        $this->assertNotNull($stock);
+        $this->assertEquals(1000, (float) $stock->current_stock);
+
+        // Verifikasi pengeluaran tercatat di Cashflow OUTFLOW pengurang kas
+        $cashflow = \App\Models\Cashflow::where('outlet_id', $this->outlet->id)
+            ->where('category', 'RESTOCK_PURCHASE')
+            ->where('type', 'OUTFLOW')
+            ->first();
+        $this->assertNotNull($cashflow);
+        $this->assertEquals(120000, (float) $cashflow->amount);
     }
 
     public function test_users_management_page_loads_successfully()
