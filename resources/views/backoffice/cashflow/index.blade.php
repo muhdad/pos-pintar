@@ -610,9 +610,9 @@
 
         <!-- MODAL: Catat Pengeluaran Baru (Pastel Modern) -->
         <div x-show="expenseModalOpen" 
-             class="fixed inset-0 bg-stone-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs" 
+             class="fixed inset-0 bg-stone-900/50 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs overflow-y-auto" 
              x-cloak>
-            <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-stone-200 animate-in fade-in duration-150"
+            <div class="bg-white rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-xl border border-stone-200 max-h-[90vh] overflow-y-auto animate-in fade-in duration-150"
                  @click.outside="expenseModalOpen = false">
                 <div class="flex items-center justify-between pb-3 border-b border-stone-100 mb-4">
                     <div class="flex items-center gap-2">
@@ -713,9 +713,9 @@
 
         <!-- MODAL: Catat Pemasukan Baru (Pastel Modern) -->
         <div x-show="incomeModalOpen" 
-             class="fixed inset-0 bg-stone-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs" 
+             class="fixed inset-0 bg-stone-900/50 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs overflow-y-auto" 
              x-cloak>
-            <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-stone-200 animate-in fade-in duration-150"
+            <div class="bg-white rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-xl border border-stone-200 max-h-[90vh] overflow-y-auto animate-in fade-in duration-150"
                  @click.outside="incomeModalOpen = false">
                 <div class="flex items-center justify-between pb-3 border-b border-stone-100 mb-4">
                     <div class="flex items-center gap-2">

@@ -106,7 +106,7 @@
                 <h1 class="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">Katalog Menu & Resep (BOM)</h1>
                 <p class="text-xs text-slate-500 mt-0.5">Kelola harga jual, perhitungan HPP resep otomatis, foto menu, dan kategori.</p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
                 <!-- Export JSON Button -->
                 <a href="{{ route('backoffice.catalog.export') }}" 
                    class="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition flex items-center gap-1.5 shadow-xs"

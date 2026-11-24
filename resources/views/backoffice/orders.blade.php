@@ -15,7 +15,7 @@
                 <h1 class="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">Riwayat Transaksi & Struk</h1>
                 <p class="text-xs text-slate-500 mt-0.5">Daftar rekonsiliasi seluruh transaksi kasir online dan offline yang telah tersinkronisasi.</p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
                 <!-- Export Excel Button -->
                 <a href="{{ route('backoffice.orders.export-excel', request()->query()) }}" 
                    class="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-semibold text-xs transition flex items-center gap-1.5 shadow-xs">
@@ -135,9 +135,9 @@
 
         <!-- Detail Struk Modal -->
         <div x-show="detailModalOpen" 
-             class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs" 
+             class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs" 
              x-cloak>
-            <div class="bg-white rounded-2xl max-w-sm w-full p-6 border border-slate-200 shadow-xl animate-in fade-in duration-150"
+            <div class="bg-white rounded-2xl max-w-sm w-full p-4 sm:p-6 border border-slate-200 shadow-xl max-h-[90vh] overflow-y-auto animate-in fade-in duration-150"
                  @click.outside="detailModalOpen = false">
                 
                 <div class="flex items-center justify-between pb-3 border-b border-slate-100">

@@ -122,7 +122,7 @@
                 <h1 class="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">Manajemen Bahan Baku & Gudang</h1>
                 <p class="text-xs text-slate-500 mt-0.5">Monitoring kuantitas bahan baku riil, restock nota faktur, dan audit mutasi stok resep.</p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
                 <!-- Export JSON Button -->
                 <a href="{{ route('backoffice.catalog.export') }}" 
                    class="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition flex items-center gap-1.5 shadow-xs"
@@ -144,37 +144,27 @@
                     <span>Import</span>
                 </button>
 
-                <!-- Auto Restock Struk AI Button (Soft Amber) -->
-                <button type="button" 
-                        @click="ocrModalOpen = true"
-                        class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs shadow-xs transition flex items-center gap-1.5">
+                <!-- Restock Bahan Cerdas -->
+                <a href="{{ route('backoffice.restock') }}" 
+                   class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs shadow-xs transition flex items-center gap-1.5">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>
-                    <span>📸 Auto Restock Struk AI</span>
-                </button>
+                    <span>Restock Bahan</span>
+                </a>
 
                 <button type="button" 
                         @click="opnameModalOpen = true"
-                        class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-amber-900 hover:bg-amber-50/70 font-semibold text-xs transition flex items-center gap-1.5 shadow-xs">
-                    <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition flex items-center gap-1.5 shadow-xs">
+                    <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                     </svg>
                     <span>Stock Opname</span>
                 </button>
 
                 <button type="button" 
-                        @click="restockModalOpen = true"
-                        class="px-3 py-1.5 rounded-[4px] bg-white border-2 border-[#121212] text-stone-700 hover:bg-stone-50 font-bold text-xs transition flex items-center gap-1.5 shadow-[2px_2px_0px_#121212]">
-                    <svg class="w-3.5 h-3.5 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
-                    <span>Restock Manual</span>
-                </button>
-
-                <button type="button" 
                         @click="materialModalOpen = true"
-                        class="bauhaus-btn-blue">
+                        class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition flex items-center gap-1.5 shadow-xs">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
@@ -183,12 +173,12 @@
 
                 <!-- Export Excel Stok Gudang Button -->
                 <a href="{{ route('backoffice.inventory.export-excel') }}" 
-                   class="px-3 py-1.5 rounded-[4px] bg-[#FACC15] hover:bg-yellow-400 text-[#121212] font-black text-xs transition flex items-center gap-1.5 border-2 border-[#121212] shadow-[2px_2px_0px_#121212] active:translate-x-0.5 active:translate-y-0.5"
+                   class="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-semibold text-xs transition flex items-center gap-1.5 shadow-xs"
                    title="Export Seluruh Stok Bahan Baku & Valuasi ke File Excel">
-                    <svg class="w-3.5 h-3.5 text-[#121212]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <span>📥 Export Excel</span>
+                    <span>Export Excel</span>
                 </a>
             </div>
         </div>

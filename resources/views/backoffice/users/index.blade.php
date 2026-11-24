@@ -261,9 +261,9 @@
 
         <!-- Create / Edit User Modal -->
         <div x-show="userModalOpen" 
-             class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs" 
+             class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs overflow-y-auto" 
              x-cloak>
-            <div class="bg-white rounded-2xl max-w-md w-full p-6 border border-slate-200 shadow-xl animate-in fade-in duration-150"
+            <div class="bg-white rounded-2xl max-w-md w-full p-4 sm:p-6 border border-slate-200 shadow-xl max-h-[90vh] overflow-y-auto animate-in fade-in duration-150"
                  @click.outside="userModalOpen = false">
                 
                 <div class="flex items-center justify-between pb-3 border-b border-slate-100">

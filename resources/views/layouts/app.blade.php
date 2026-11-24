@@ -199,32 +199,33 @@
         <!-- Main Workspace Area -->
         <div class="flex-1 flex flex-col min-w-0 overflow-x-hidden">
             <!-- Modern Soft Top Bar -->
-            <header class="h-14 bg-white border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between shrink-0 sticky top-0 z-30 shadow-xs">
-                <div class="flex items-center gap-3">
-                    <button @click="sidebarOpen = true" class="md:hidden p-1.5 -ml-1 text-slate-700 hover:bg-slate-100 rounded-lg">
+            <header class="h-14 bg-white border-b border-slate-200/80 px-3.5 sm:px-6 flex items-center justify-between shrink-0 sticky top-0 z-30 shadow-xs">
+                <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <button @click="sidebarOpen = true" class="md:hidden p-1.5 -ml-1 text-slate-700 hover:bg-slate-100 rounded-lg shrink-0" aria-label="Buka Menu">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </button>
-                    <div>
-                        <span class="font-bold text-sm text-slate-800">@yield('page_title', 'Backoffice Resto')</span>
+                    <div class="min-w-0">
+                        <span class="font-bold text-xs sm:text-sm text-slate-800 truncate block max-w-[160px] sm:max-w-none">@yield('page_title', 'Backoffice Resto')</span>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3 text-xs">
+                <div class="flex items-center gap-2 sm:gap-3 text-xs shrink-0">
                     <span class="text-slate-500 font-medium hidden sm:inline">{{ \Carbon\Carbon::now()->translatedFormat('l, d F Y') }}</span>
                     <span class="text-slate-300 hidden sm:inline">|</span>
-                    <a href="{{ route('pos.index') }}" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition flex items-center gap-1.5 active:translate-y-px">
+                    <a href="{{ route('pos.index') }}" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition flex items-center gap-1.5 active:translate-y-px">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         </svg>
-                        <span>Kasir POS</span>
+                        <span class="hidden sm:inline">Kasir POS</span>
+                        <span class="sm:hidden">Kasir</span>
                     </a>
                 </div>
             </header>
 
-            <!-- Page Body Content -->
-            <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+            <!-- Page Body Content (pb-28 on mobile to prevent bottom nav collision) -->
+            <main class="flex-1 p-3.5 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-28 md:pb-8">
                 @if (session('status'))
                     <div class="mb-4 p-3.5 bg-emerald-50/90 border border-emerald-200 text-emerald-800 text-xs font-semibold rounded-xl flex items-center justify-between shadow-xs">
                         <div class="flex items-center gap-2">
@@ -246,6 +247,58 @@
 
                 {{ $slot }}
             </main>
+
+            <!-- Mobile Quick Access Bottom Navigation Bar (< md) -->
+            <nav class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-2 py-1.5 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]"
+                 style="padding-bottom: max(0.375rem, env(safe-area-inset-bottom));">
+                <div class="grid grid-cols-5 gap-1 text-center items-center">
+                    <!-- 1. Dashboard -->
+                    <a href="{{ route('dashboard') }}" 
+                       class="flex flex-col items-center justify-center py-1 rounded-xl transition {{ request()->routeIs('dashboard') ? 'text-emerald-700 font-bold bg-emerald-50/80' : 'text-slate-500 hover:text-slate-900' }}">
+                        <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                        </svg>
+                        <span class="text-[9px] leading-tight block">Home</span>
+                    </a>
+
+                    <!-- 2. Restock Bahan -->
+                    <a href="{{ route('backoffice.restock') }}" 
+                       class="flex flex-col items-center justify-center py-1 rounded-xl transition {{ request()->routeIs('backoffice.restock*') ? 'text-emerald-700 font-bold bg-emerald-50/80' : 'text-slate-500 hover:text-slate-900' }}">
+                        <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                        <span class="text-[9px] leading-tight block">Restock</span>
+                    </a>
+
+                    <!-- 3. Highlighted POS Kasir Button -->
+                    <a href="{{ route('pos.index') }}" 
+                       class="flex flex-col items-center justify-center -mt-3.5 py-1 transition group">
+                        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center shadow-md border-2 border-white group-active:scale-95 transition">
+                            <span class="text-lg">🍜</span>
+                        </div>
+                        <span class="text-[9px] font-bold text-emerald-800 leading-tight block mt-0.5">Kasir POS</span>
+                    </a>
+
+                    <!-- 4. Keuangan / Arus Kas -->
+                    <a href="{{ route('backoffice.cashflow.index') }}" 
+                       class="flex flex-col items-center justify-center py-1 rounded-xl transition {{ request()->routeIs('backoffice.cashflow*') ? 'text-emerald-700 font-bold bg-emerald-50/80' : 'text-slate-500 hover:text-slate-900' }}">
+                        <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span class="text-[9px] leading-tight block">Kas</span>
+                    </a>
+
+                    <!-- 5. Hamburger Menu -->
+                    <button type="button" 
+                            @click="sidebarOpen = true" 
+                            class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-500 hover:text-slate-900 transition">
+                        <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                        <span class="text-[9px] leading-tight block">Menu</span>
+                    </button>
+                </div>
+            </nav>
         </div>
     </div>
 </body>

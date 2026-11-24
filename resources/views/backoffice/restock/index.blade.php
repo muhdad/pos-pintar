@@ -180,16 +180,16 @@
             </div>
 
             <!-- Ringkasan Cepat Pengeluaran Belanja Restock -->
-            <div class="flex items-center gap-3">
-                <div class="px-3.5 py-2 bg-white rounded-2xl border border-slate-200/80 shadow-xs text-right">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                <div class="flex-1 sm:flex-initial px-3.5 py-2 bg-white rounded-2xl border border-slate-200/80 shadow-xs text-right min-w-[130px]">
                     <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Belanja Hari Ini</span>
-                    <span class="text-sm font-bold text-slate-800 font-mono tabular-nums">
+                    <span class="text-xs sm:text-sm font-bold text-slate-800 font-mono tabular-nums">
                         Rp {{ number_format($totalTodayRestock, 0, ',', '.') }}
                     </span>
                 </div>
-                <div class="px-3.5 py-2 bg-emerald-50/80 rounded-2xl border border-emerald-200/80 shadow-xs text-right">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">Total Restock Bulan Ini</span>
-                    <span class="text-sm font-bold text-emerald-800 font-mono tabular-nums">
+                <div class="flex-1 sm:flex-initial px-3.5 py-2 bg-emerald-50/80 rounded-2xl border border-emerald-200/80 shadow-xs text-right min-w-[140px]">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">Restock Bulan Ini</span>
+                    <span class="text-xs sm:text-sm font-bold text-emerald-800 font-mono tabular-nums">
                         Rp {{ number_format($totalMonthRestock, 0, ',', '.') }}
                     </span>
                 </div>
@@ -201,7 +201,7 @@
 
             <!-- Left: Form Input Restock dengan Auto-Conversion -->
             <div class="lg:col-span-7 space-y-5">
-                <form method="POST" action="{{ route('backoffice.restock.store') }}" class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs space-y-5">
+                <form method="POST" action="{{ route('backoffice.restock.store') }}" class="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-4 sm:p-6 shadow-xs space-y-5">
                     @csrf
 
                     <div class="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -354,22 +354,22 @@
                             <span class="text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 font-mono">Real-Time</span>
                         </div>
 
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                            <div class="bg-white/80 p-2.5 rounded-xl border border-emerald-200/60">
-                                <span class="text-[10px] text-slate-500 block">Beli di Pasar</span>
-                                <span class="font-bold text-slate-800 font-mono text-sm block mt-0.5" x-text="(purchaseQty || 0) + ' ' + purchaseUnit"></span>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-xs">
+                            <div class="bg-white/80 p-2 sm:p-2.5 rounded-xl border border-emerald-200/60 min-w-0">
+                                <span class="text-[10px] text-slate-500 block truncate">Beli di Pasar</span>
+                                <span class="font-bold text-slate-800 font-mono text-xs sm:text-sm block mt-0.5 truncate" x-text="(purchaseQty || 0) + ' ' + purchaseUnit"></span>
                             </div>
-                            <div class="bg-white/80 p-2.5 rounded-xl border border-emerald-200/60">
-                                <span class="text-[10px] text-emerald-700 font-semibold block">Masuk ke Sistem</span>
-                                <span class="font-bold text-emerald-800 font-mono text-sm block mt-0.5" x-text="'+' + convertedQty.toLocaleString('id-ID') + ' ' + systemUnit"></span>
+                            <div class="bg-white/80 p-2 sm:p-2.5 rounded-xl border border-emerald-200/60 min-w-0">
+                                <span class="text-[10px] text-emerald-700 font-semibold block truncate">Masuk ke Sistem</span>
+                                <span class="font-bold text-emerald-800 font-mono text-xs sm:text-sm block mt-0.5 truncate" x-text="'+' + convertedQty.toLocaleString('id-ID') + ' ' + systemUnit"></span>
                             </div>
-                            <div class="bg-white/80 p-2.5 rounded-xl border border-emerald-200/60">
-                                <span class="text-[10px] text-slate-500 block">Stok Akhir Nanti</span>
-                                <span class="font-bold text-slate-800 font-mono text-sm block mt-0.5" x-text="newStock.toLocaleString('id-ID') + ' ' + systemUnit"></span>
+                            <div class="bg-white/80 p-2 sm:p-2.5 rounded-xl border border-emerald-200/60 min-w-0">
+                                <span class="text-[10px] text-slate-500 block truncate">Stok Akhir Nanti</span>
+                                <span class="font-bold text-slate-800 font-mono text-xs sm:text-sm block mt-0.5 truncate" x-text="newStock.toLocaleString('id-ID') + ' ' + systemUnit"></span>
                             </div>
-                            <div class="bg-white/80 p-2.5 rounded-xl border border-emerald-200/60">
-                                <span class="text-[10px] text-slate-500 block">HPP Baru / <span x-text="systemUnit"></span></span>
-                                <span class="font-bold text-emerald-700 font-mono text-sm block mt-0.5" x-text="formatRupiah(newHpp)"></span>
+                            <div class="bg-white/80 p-2 sm:p-2.5 rounded-xl border border-emerald-200/60 min-w-0">
+                                <span class="text-[10px] text-slate-500 block truncate">HPP Baru / <span x-text="systemUnit"></span></span>
+                                <span class="font-bold text-emerald-700 font-mono text-xs sm:text-sm block mt-0.5 truncate" x-text="formatRupiah(newHpp)"></span>
                             </div>
                         </div>
 
