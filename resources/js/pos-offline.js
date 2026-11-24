@@ -883,6 +883,7 @@ export function posTerminal() {
                     this.qrisFullScreenModalOpen = false;
                     this.mobileCartOpen = false;
                     this.successModalOpen = true;
+                    this.successOpenedAt = Date.now();
 
                 } catch (err) {
                     console.error('Gagal menyelesaikan pembayaran:', err);
@@ -895,6 +896,7 @@ export function posTerminal() {
             // Buka kembali struk transaksi terakhir untuk dicetak ulang (Cetak Ulang Struk)
             async openLastReceipt() {
                 if (this.completedOrder) {
+                    this.successOpenedAt = Date.now();
                     this.successModalOpen = true;
                     return;
                 }
@@ -902,12 +904,19 @@ export function posTerminal() {
                     const last = await posDb.orders.reverse().first();
                     if (last) {
                         this.completedOrder = last;
+                        this.successOpenedAt = Date.now();
                         this.successModalOpen = true;
                     } else {
                         alert('Belum ada riwayat transaksi kasir yang tersimpan.');
                     }
                 } catch (e) {
                     console.error('Gagal membuka struk terakhir:', e);
+                }
+            },
+
+            closeSuccessModal() {
+                if (Date.now() - (this.successOpenedAt || 0) > 300) {
+                    this.successModalOpen = false;
                 }
             },
 

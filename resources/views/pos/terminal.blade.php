@@ -966,8 +966,8 @@
 
         <!-- 7. Success Modal -->
         <div x-show="successModalOpen"
-             @click.self="successModalOpen = false"
-             class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+             @click.self="closeSuccessModal()"
+             class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
              x-cloak>
             <div class="bg-white text-slate-800 rounded-3xl max-w-sm sm:max-w-md w-full border border-slate-200/90 shadow-xl my-auto max-h-[92vh] flex flex-col overflow-hidden p-5 text-center animate-in fade-in duration-150"
                  @click.stop>

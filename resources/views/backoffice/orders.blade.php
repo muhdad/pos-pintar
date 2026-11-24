@@ -3,12 +3,20 @@
 
     <script>
         window.BACKOFFICE_ORDERS = @json($orders->items());
+        window.BACKOFFICE_ORDERS_MAP = {};
+        (window.BACKOFFICE_ORDERS || []).forEach(function(o) {
+            if (o) {
+                if (o.order_number) window.BACKOFFICE_ORDERS_MAP[String(o.order_number)] = o;
+                if (o.id) window.BACKOFFICE_ORDERS_MAP[String(o.id)] = o;
+            }
+        });
     </script>
 
     <div x-data="{
         ordersList: window.BACKOFFICE_ORDERS || [],
         detailModalOpen: false,
         selectedOrder: null,
+        openedAt: 0,
         useRawBt: localStorage.getItem('POS_USE_RAWBT') === 'true',
 
         init() {
@@ -17,18 +25,22 @@
             }
         },
 
-        openDetail(orderOrId) {
-            if (orderOrId && typeof orderOrId === 'object' && (orderOrId.id || orderOrId.order_number)) {
-                this.selectedOrder = orderOrId;
-                this.detailModalOpen = true;
-                return;
-            }
-            const idStr = String(orderOrId || '');
-            const list = Array.isArray(this.ordersList) 
-                ? this.ordersList 
-                : (Array.isArray(window.BACKOFFICE_ORDERS) ? window.BACKOFFICE_ORDERS : Object.values(window.BACKOFFICE_ORDERS || {}));
-            this.selectedOrder = list.find(o => String(o?.id) === idStr || String(o?.order_number) === idStr) || null;
+        openDetail(key) {
+            if (!key) return;
+            const keyStr = String(key);
+            const found = (window.BACKOFFICE_ORDERS_MAP && window.BACKOFFICE_ORDERS_MAP[keyStr])
+                ? window.BACKOFFICE_ORDERS_MAP[keyStr]
+                : (this.ordersList || []).find(o => String(o?.id) === keyStr || String(o?.order_number) === keyStr);
+
+            this.selectedOrder = found || null;
+            this.openedAt = Date.now();
             this.detailModalOpen = true;
+        },
+
+        closeModalBackdrop() {
+            if (Date.now() - (this.openedAt || 0) > 300) {
+                this.detailModalOpen = false;
+            }
         },
 
         toggleRawBtMode() {
@@ -95,11 +107,8 @@
         <!-- Orders View for Tablet & Mobile (Card Layout - Touch Friendly) -->
         <div class="block md:hidden space-y-3">
             @forelse ($orders as $order)
-                @php
-                    $orderData = json_encode($order);
-                @endphp
                 <div class="bg-white rounded-2xl border border-stone-200/80 p-4 shadow-xs space-y-2.5 active:bg-stone-50 transition cursor-pointer select-none"
-                     @click="openDetail({{ $orderData }})">
+                     @click="openDetail('{{ $order->order_number }}')">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
                             <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs">
@@ -137,7 +146,7 @@
                                 {{ $order->payments->first()->method ?? 'CASH' }}
                             </span>
                             <button type="button" 
-                                    @click.stop="openDetail({{ $orderData }})"
+                                    @click.stop="openDetail('{{ $order->order_number }}')"
                                     class="px-3.5 py-2 rounded-xl bg-emerald-600 active:bg-emerald-700 text-white text-xs font-bold shadow-xs active:scale-95 transition">
                                 Buka Struk
                             </button>
@@ -169,11 +178,8 @@
                     </thead>
                     <tbody class="divide-y divide-stone-100">
                         @forelse ($orders as $order)
-                            @php
-                                $orderData = json_encode($order);
-                            @endphp
                             <tr class="hover:bg-emerald-50/50 transition cursor-pointer select-none"
-                                @click="openDetail({{ $orderData }})">
+                                @click="openDetail('{{ $order->order_number }}')">
                                 <td class="py-3.5 px-4 font-bold text-stone-900 font-mono tabular-nums">
                                     {{ $order->order_number }}
                                 </td>
@@ -209,7 +215,7 @@
                                 <td class="py-3.5 px-4 text-right">
                                     <div class="flex items-center justify-end gap-1.5">
                                         <button type="button" 
-                                                @click.stop="openDetail({{ $orderData }})"
+                                                @click.stop="openDetail('{{ $order->order_number }}')"
                                                 class="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-800 border border-emerald-300 text-xs font-bold transition shadow-xs flex items-center gap-1 active:scale-95"
                                                 title="Buka Struk Pembayaran">
                                             Buka Struk
@@ -253,7 +259,7 @@
 
         <!-- Detail Struk Modal (Ringan, Tanpa Backdrop-Blur Berat, Touch Friendly) -->
         <div x-show="detailModalOpen" 
-             @click.self="detailModalOpen = false" 
+             @click.self="closeModalBackdrop()" 
              class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto" 
              x-cloak>
             <div class="bg-white rounded-2xl max-w-sm sm:max-w-md w-full p-4 sm:p-6 border border-stone-200 shadow-xl max-h-[90vh] overflow-y-auto relative"
