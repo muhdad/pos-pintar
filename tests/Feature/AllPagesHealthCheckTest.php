@@ -106,6 +106,46 @@ class AllPagesHealthCheckTest extends TestCase
         $response->assertStatus(200);
     }
 
+    public function test_can_restock_pure_physical_material_without_price_and_preserve_manual_hpp()
+    {
+        $material = \App\Models\RawMaterial::create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Daging Ayam Broiler',
+            'unit' => 'gram',
+            'average_cost' => 75,
+            'minimum_stock' => 500,
+        ]);
+
+        // Restock murni bahan (tanpa harga / pure fisik)
+        $response = $this->actingAs($this->adminUser)->post('/backoffice/restock', [
+            'raw_material_id' => $material->id,
+            'purchase_quantity' => 2.5,
+            'purchase_unit' => 'kg',
+            'total_price' => null,
+            'supplier_name' => 'Pasar Tradisional',
+        ]);
+
+        $response->assertRedirect(route('backoffice.restock'));
+        $response->assertSessionHas('status');
+
+        // Verifikasi stok bertambah 2.5 kg = 2500 gram
+        $stock = \App\Models\OutletStock::where('outlet_id', $this->outlet->id)
+            ->where('raw_material_id', $material->id)
+            ->first();
+        $this->assertNotNull($stock);
+        $this->assertEquals(2500, (float) $stock->current_stock);
+
+        // Verifikasi HPP manual TIDAK diubah/ditimpa sistem (tetap 75)
+        $material->refresh();
+        $this->assertEquals(75, (float) $material->average_cost);
+
+        // Verifikasi tidak ada cashflow tercatat karena restock tanpa harga
+        $cashflow = \App\Models\Cashflow::where('outlet_id', $this->outlet->id)
+            ->where('category', 'RESTOCK_PURCHASE')
+            ->first();
+        $this->assertNull($cashflow);
+    }
+
     public function test_can_restock_with_unit_conversion_and_cashflow_deduction()
     {
         $material = \App\Models\RawMaterial::create([
@@ -136,6 +176,10 @@ class AllPagesHealthCheckTest extends TestCase
             ->first();
         $this->assertNotNull($stock);
         $this->assertEquals(1000, (float) $stock->current_stock);
+
+        // Verifikasi HPP manual tetap terjaga (tidak ter-overwrite)
+        $material->refresh();
+        $this->assertEquals(100, (float) $material->average_cost);
 
         // Verifikasi pengeluaran tercatat di Cashflow OUTFLOW pengurang kas
         $cashflow = \App\Models\Cashflow::where('outlet_id', $this->outlet->id)

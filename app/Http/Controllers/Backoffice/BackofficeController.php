@@ -847,7 +847,7 @@ class BackofficeController extends Controller
     }
 
     /**
-     * Simpan Transaksi Restock Bahan Baku dengan Konversi Satuan Otomatis.
+     * Simpan Transaksi Restock Bahan Baku dengan Konversi Satuan Otomatis (Pure Bahan & HPP Manual).
      */
     public function storeRestock(Request $request, RestockService $restockService): RedirectResponse
     {
@@ -859,10 +859,10 @@ class BackofficeController extends Controller
             'purchase_quantity' => 'required|numeric|min:0.0001',
             'purchase_unit' => 'required|string|max:50',
             'custom_conversion_factor' => 'nullable|numeric|min:0.0001',
-            'total_price' => 'required|numeric|min:0',
+            'total_price' => 'nullable|numeric|min:0',
             'supplier_name' => 'nullable|string|max:150',
-            'source_account' => 'required|string|in:CASH_DRAWER,BANK_ACCOUNT,PETTY_CASH',
-            'transaction_date' => 'required|date',
+            'source_account' => 'nullable|string|in:CASH_DRAWER,BANK_ACCOUNT,PETTY_CASH',
+            'transaction_date' => 'nullable|date',
             'notes' => 'nullable|string|max:255',
             'record_cashflow' => 'nullable',
         ]);
@@ -874,7 +874,11 @@ class BackofficeController extends Controller
             $request->user()?->id
         );
 
-        $msg = "Restock {$result['material_name']} berhasil! Ditambahkan +{$result['converted_qty']} {$result['system_unit']} (Beli: {$result['purchase_qty']} {$result['purchase_unit']}, Rp " . number_format($result['total_price'], 0, ',', '.') . "). Stok kini: {$result['new_stock']} {$result['system_unit']}.";
+        if ($result['total_price'] > 0) {
+            $msg = "Restock {$result['material_name']} berhasil! Ditambahkan +{$result['converted_qty']} {$result['system_unit']} (Beli: {$result['purchase_qty']} {$result['purchase_unit']}, Rp " . number_format($result['total_price'], 0, ',', '.') . "). Stok kini: {$result['new_stock']} {$result['system_unit']}.";
+        } else {
+            $msg = "Restock {$result['material_name']} berhasil! Ditambahkan +{$result['converted_qty']} {$result['system_unit']} (Beli: {$result['purchase_qty']} {$result['purchase_unit']}). Stok kini: {$result['new_stock']} {$result['system_unit']}. HPP tetap manual.";
+        }
 
         return redirect()->route('backoffice.restock')->with('status', $msg);
     }

@@ -112,8 +112,8 @@ class RestockService
     }
 
     /**
-     * Hitung Moving Average HPP (Harga Pokok Pembelian per Satuan Sistem).
-     * Rumus: ((Stok Lama * HPP Lama) + Total Harga Beli Baru) / (Stok Lama + Kuantitas Tambahan)
+     * Hitung Moving Average HPP (Opsional untuk referensi jika dibutuhkan di masa mendatang).
+     * Saat ini dinonaktifkan sesuai permintaan pemilik: HPP menu & bahan murni manual.
      */
     public function calculateNewHpp(float $currentStock, float $currentHpp, float $addedConvertedQty, float $totalPurchasePrice): float
     {
@@ -121,7 +121,7 @@ class RestockService
         $totalNewStock = $safeCurrentStock + $addedConvertedQty;
 
         if ($totalNewStock <= 0) {
-            return $addedConvertedQty > 0 ? round($totalPurchasePrice / $addedQty, 2) : $currentHpp;
+            return $addedConvertedQty > 0 && $totalPurchasePrice > 0 ? round($totalPurchasePrice / $addedConvertedQty, 2) : $currentHpp;
         }
 
         $totalValuation = ($safeCurrentStock * $currentHpp) + $totalPurchasePrice;
@@ -130,12 +130,12 @@ class RestockService
     }
 
     /**
-     * Eksekusi Restock Bahan Baku ke Database:
-     * 1. Konversi satuan beli ke satuan sistem.
-     * 2. Hitung HPP Moving Average.
-     * 3. Tambah OutletStock.
-     * 4. Catat riwayat StockMovement.
-     * 5. Catat pengeluaran ke Arus Kas (Cashflow OUTFLOW) untuk memotong omset kas.
+     * Eksekusi Restock Bahan Baku ke Database (Pure Bahan Fisik & HPP Manual):
+     * 1. Konversi kuantitas dari satuan beli (misal: kg) ke satuan sistem (misal: gram) secara cerdas.
+     * 2. Tambah stok cabang (OutletStock) sesuai kuantitas konversi.
+     * 3. HPP manual TIDAK diubah/ditimpa sistem (tetap mengikuti nilai manual yang diinput pengguna).
+     * 4. Catat riwayat kartu stok (StockMovement IN).
+     * 5. Catat pengeluaran ke Arus Kas (Cashflow OUTFLOW) HANYA jika nominal harga beli diisi (> 0).
      */
     public function executeRestock(array $data, string $outletId, string $tenantId, ?string $userId = null): array
     {
@@ -146,20 +146,20 @@ class RestockService
         $purchaseUnit = (string) ($data['purchase_unit'] ?? $systemUnit);
         $customFactor = !empty($data['custom_conversion_factor']) ? (float) $data['custom_conversion_factor'] : null;
 
-        // 1. Konversi otomatis
+        // 1. Konversi kuantitas otomatis
         $convertedQty = $this->convertQuantity($purchaseQty, $purchaseUnit, $systemUnit, $customFactor);
 
-        // 2. Harga Total Belanja
+        // 2. Harga Total Belanja (Opsional - default 0 untuk restock pure fisik bahan)
         if (isset($data['total_price']) && (float) $data['total_price'] > 0) {
             $totalPrice = (float) $data['total_price'];
-        } elseif (isset($data['price_per_purchase_unit'])) {
+        } elseif (isset($data['price_per_purchase_unit']) && (float) $data['price_per_purchase_unit'] > 0) {
             $totalPrice = $purchaseQty * (float) $data['price_per_purchase_unit'];
         } else {
             $totalPrice = 0.0;
         }
 
         $notes = $data['notes'] ?? null;
-        $supplier = $data['supplier_name'] ?? 'Pasar / Supplier';
+        $supplier = !empty($data['supplier_name']) ? trim($data['supplier_name']) : 'Pasar / Supplier';
         $sourceAccount = $data['source_account'] ?? 'CASH_DRAWER';
         $transactionDate = $data['transaction_date'] ?? Carbon::today()->toDateString();
         $recordCashflow = filter_var($data['record_cashflow'] ?? true, FILTER_VALIDATE_BOOLEAN);
@@ -189,17 +189,19 @@ class RestockService
             );
 
             $oldStock = (float) $stock->current_stock;
-            $oldHpp = (float) $material->average_cost;
+            $currentHpp = (float) $material->average_cost;
 
-            // 3. Kalkulasi HPP Baru
-            $newHpp = $this->calculateNewHpp($oldStock, $oldHpp, $convertedQty, $totalPrice);
-
-            // Update stok dan HPP bahan baku
+            // Tambah stok fisik bahan baku cabang
             $stock->increment('current_stock', $convertedQty);
-            $material->update(['average_cost' => $newHpp]);
 
-            // 4. Catat StockMovement
-            $notesString = "Restock: Beli {$purchaseQty} {$purchaseUnit} (Otomatis konversi jadi +{$convertedQty} {$systemUnit}) dari {$supplier}";
+            // CATATAN PENTING: Sesuai arahan pemilik, HPP menu & bahan murni manual.
+            // Sistem TIDAK menimpa $material->average_cost agar nilai modal manual tidak ter-reset.
+
+            // Catat StockMovement
+            $notesString = "Restock Bahan: Beli {$purchaseQty} {$purchaseUnit} (Otomatis masuk sistem +{$convertedQty} {$systemUnit}) dari {$supplier}";
+            if ($totalPrice > 0) {
+                $notesString .= " [Rp " . number_format($totalPrice, 0, ',', '.') . "]";
+            }
             if ($notes) {
                 $notesString .= " - Catatan: {$notes}";
             }
@@ -213,7 +215,7 @@ class RestockService
                 'created_at' => Carbon::parse($transactionDate)->setTimeFrom(now()),
             ]);
 
-            // 5. Catat ke Cashflow OUTFLOW (Pengeluaran Belanja Bahan Pengurang Omset)
+            // Catat ke Cashflow OUTFLOW HANYA jika harga beli diisi dan aktif
             $cashflow = null;
             if ($recordCashflow && $totalPrice > 0) {
                 $cashflow = Cashflow::create([
@@ -225,7 +227,7 @@ class RestockService
                     'amount' => $totalPrice,
                     'source_account' => $sourceAccount,
                     'transaction_date' => $transactionDate,
-                    'description' => "Belanja Restock {$material->name}: {$purchaseQty} {$purchaseUnit} (-> {$convertedQty} {$systemUnit}) - {$supplier}",
+                    'description' => "Belanja Restock {$material->name}: {$purchaseQty} {$purchaseUnit} (-> +{$convertedQty} {$systemUnit}) - {$supplier}",
                     'is_h_minus_one_deduction' => true,
                 ]);
             }
@@ -237,9 +239,8 @@ class RestockService
                 'purchase_unit' => $purchaseUnit,
                 'converted_qty' => $convertedQty,
                 'old_stock' => $oldStock,
-                'new_stock' => $stock->current_stock,
-                'old_hpp' => $oldHpp,
-                'new_hpp' => $newHpp,
+                'new_stock' => (float) $stock->current_stock,
+                'hpp' => $currentHpp,
                 'total_price' => $totalPrice,
                 'stock_movement_id' => $movement->id,
                 'cashflow_id' => $cashflow?->id,
