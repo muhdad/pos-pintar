@@ -271,7 +271,7 @@ export class ThermalPrinter {
         if (this.isConnected && this.connectionType === 'bluetooth' && this.characteristic) {
             try {
                 const data = this.buildKotEscPosBytes(order);
-                const CHUNK_SIZE = 64;
+                const CHUNK_SIZE = 20;
                 for (let i = 0; i < data.length; i += CHUNK_SIZE) {
                     const chunk = data.slice(i, i + CHUNK_SIZE);
                     if (this.characteristic.writeValueWithoutResponse) {
@@ -279,9 +279,7 @@ export class ThermalPrinter {
                     } else {
                         await this.characteristic.writeValue(chunk);
                     }
-                    if (i + CHUNK_SIZE < data.length) {
-                        await new Promise(r => setTimeout(r, 35));
-                    }
+                    await new Promise(r => setTimeout(r, 15));
                 }
                 return true;
             } catch (e) {
@@ -483,18 +481,22 @@ export class ThermalPrinter {
      */
     printBrowser(order, isKot = false) {
         try {
-            // Ambil konten dari elemen DOM atau generate langsung dari data order
-            let contentHtml = '';
-            const targetEl = document.getElementById(isKot ? 'printable-kot' : 'printable-receipt');
-            if (targetEl && targetEl.innerHTML.trim().length > 30) {
-                contentHtml = targetEl.innerHTML;
-            } else if (order) {
-                contentHtml = this.generateReceiptHtml(order, isKot);
+            // Selalu utamakan generate HTML struk murni (fully rendered) dari data order
+            let contentHtml = order ? this.generateReceiptHtml(order, isKot) : '';
+            if (!contentHtml) {
+                const targetEl = document.getElementById(isKot ? 'printable-kot' : 'printable-receipt');
+                if (targetEl) contentHtml = targetEl.innerHTML;
             }
 
             if (!contentHtml) {
                 setTimeout(() => window.print(), 150);
                 return true;
+            }
+
+            // Update elemen DOM utama agar jika browser mencetak window utama, isinya sudah lengkap
+            const domTarget = document.getElementById(isKot ? 'printable-kot' : 'printable-receipt');
+            if (domTarget) {
+                domTarget.innerHTML = contentHtml;
             }
 
             // Gunakan iframe terisolasi yang bersih dari parent CSS / height lock
@@ -689,19 +691,22 @@ export class ThermalPrinter {
         buffer.push(...encoder.encode('Rasa Mantap, Harga Bersahabat\n'));
         buffer.push(...encoder.encode('Terima Kasih Atas Kunjungan Anda!\n\n\n\n'));
 
-        // Feed paper 3 lines past tear bar on 58mm manual tear printers (ESC d 3)
-        buffer.push(ESC, 0x64, 0x03);
+        // Feed paper 5 lines past tear bar on 58mm manual tear printers (ESC d 5)
+        buffer.push(ESC, 0x64, 0x05);
 
         return new Uint8Array(buffer);
     }
 
     /**
      * Kirim ESC/POS via Bluetooth
+     * Standar BLE ATT MTU universal adalah 20 bytes payload (23 bytes MTU - 3 bytes header).
+     * Printer thermal seperti PUTIAN POS / PT-58 / RPP02N akan langsung menolak (GATT error)
+     * jika dikirim chunk > 20 bytes tanpa negosiasi MTU, sehingga hanya judul yang sempat tercetak.
      */
     async sendEscPosBluetooth(order) {
         try {
             const data = this.buildEscPosBytes(order);
-            const CHUNK_SIZE = 64;
+            const CHUNK_SIZE = 20;
             for (let i = 0; i < data.length; i += CHUNK_SIZE) {
                 const chunk = data.slice(i, i + CHUNK_SIZE);
                 if (this.characteristic.writeValueWithoutResponse) {
@@ -709,9 +714,7 @@ export class ThermalPrinter {
                 } else {
                     await this.characteristic.writeValue(chunk);
                 }
-                if (i + CHUNK_SIZE < data.length) {
-                    await new Promise(r => setTimeout(r, 35));
-                }
+                await new Promise(r => setTimeout(r, 15));
             }
             return true;
         } catch (err) {

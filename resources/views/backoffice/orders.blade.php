@@ -36,6 +36,14 @@
                     this.openedAt = Date.now();
                     this.detailModalOpen = true;
 
+                    // Langsung inject HTML struk lengkap ke #printable-receipt agar tidak bergantung template Alpine
+                    if (found && window.thermalPrinter) {
+                        const receiptEl = document.getElementById('printable-receipt');
+                        if (receiptEl) {
+                            receiptEl.innerHTML = window.thermalPrinter.generateReceiptHtml(found, false);
+                        }
+                    }
+
                     // Auto print struk saat Buka Struk ditekan
                     this.$nextTick(() => {
                         setTimeout(() => {
