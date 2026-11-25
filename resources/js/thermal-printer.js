@@ -314,6 +314,15 @@ export class ThermalPrinter {
         let buffer = [];
         buffer.push(ESC, 0x40); // Reset
 
+        // 1. Naikkan waktu pemanasan thermal head (ESC 7 n1 n2 n3)
+        buffer.push(ESC, 0x37, 0x07, 0xa0, 0x02);
+        // 2. Aktifkan Double-Strike Mode (ESC G 1) agar titik dibakar 2x (hitam pekat dan tidak putus-putus)
+        buffer.push(ESC, 0x47, 0x01);
+        // 3. Set Print Density Maksimal (GS D 4)
+        buffer.push(GS, 0x44, 0x04);
+        // 4. Emphasized Mode (ESC E 1)
+        buffer.push(ESC, 0x45, 0x01);
+
         // Header KOT
         buffer.push(ESC, 0x61, 0x01); // Center
         buffer.push(ESC, 0x45, 0x01); // Bold on
@@ -606,6 +615,16 @@ export class ThermalPrinter {
 
         // Inisialisasi printer (ESC @)
         buffer.push(ESC, 0x40);
+
+        // ===== THERMAL DENSITY SETTINGS (agar tinta tidak pudar/putus-putus) =====
+        // ESC 7 n1 n2 n3 — Set heating time (darkness).
+        // n1=7: Max heating dots=64 (aman untuk PUTIAN POS)
+        // n2=0xa0 (160dec): Heating time = 1600µs (lebih pekat dari default 800µs)
+        // n3=0x02: Heating interval 20µs
+        buffer.push(ESC, 0x37, 0x07, 0xa0, 0x02);
+
+        // ESC G 1 — Double-Strike ON (bakar titik 2x, teks jadi tebal & tidak putus)
+        buffer.push(ESC, 0x47, 0x01);
 
         // Header Toko (Rata Tengah & Bold)
         buffer.push(ESC, 0x61, 0x01); // Center
