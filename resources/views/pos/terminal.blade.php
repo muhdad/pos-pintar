@@ -1265,7 +1265,7 @@
     <!-- ========================================================================= -->
 
     <!-- 13. 58mm/80mm Thermal Receipt Container (Cetak Struk Transaksi Pelanggan) -->
-    <div id="printable-receipt" class="print-only text-black font-mono select-none" style="width: 48mm; max-width: 48mm; margin: 0 auto; page-break-inside: avoid; break-inside: avoid;">
+    <div id="printable-receipt" class="print-only text-black font-mono select-none" style="width: 48mm; max-width: 48mm; margin: 0 auto;">
         <div class="text-center pb-2 border-b border-dashed border-black">
             <h2 class="text-xs font-bold tracking-wider uppercase text-black">SOTO LAMONGAN LESTARI</h2>
             <p class="text-[10px] mt-0.5 font-semibold text-black">{{ $outlet->name ?? 'Cabang Utama' }}</p>
@@ -1345,7 +1345,7 @@
     </div>
 
     <!-- 14. Kitchen Order Ticket (KOT) Thermal Container (Khusus Dapur & Bar, Tanpa Harga) -->
-    <div id="printable-kot" class="print-only text-black font-mono select-none" style="width: 48mm; max-width: 48mm; margin: 0 auto; page-break-inside: avoid; break-inside: avoid;">
+    <div id="printable-kot" class="print-only text-black font-mono select-none" style="width: 48mm; max-width: 48mm; margin: 0 auto;">
         <div class="text-center pb-2 border-b-2 border-black">
             <h2 class="text-sm font-black tracking-wider uppercase text-black">TIKET DAPUR (KOT)</h2>
             <p class="text-xs font-bold text-black">{{ $outlet->name ?? 'Cabang Utama' }}</p>

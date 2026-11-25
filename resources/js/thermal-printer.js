@@ -300,19 +300,8 @@ export class ThermalPrinter {
             }
         }
 
-        // Prioritas 4: Fallback Browser Print dengan Isolasi CSS 58mm
-        document.body.classList.add('print-kot');
-        const cleanup = () => {
-            document.body.classList.remove('print-kot');
-            window.removeEventListener('afterprint', cleanup);
-        };
-        window.addEventListener('afterprint', cleanup, { once: true });
-
-        setTimeout(() => {
-            window.print();
-            setTimeout(cleanup, 2500);
-        }, 80);
-        return true;
+        // Prioritas 4: Fallback Browser Print dengan Iframe Terisolasi 58mm
+        return this.printBrowser(order, true);
     }
 
     /**
@@ -370,13 +359,236 @@ export class ThermalPrinter {
     }
 
     /**
-     * Fallback Cetak via Browser (Dengan CSS print 58mm/80mm)
+     * Generate HTML struk 58mm mandiri (self-contained) tanpa bergantung CSS luar
      */
-    printBrowser(order) {
-        setTimeout(() => {
-            window.print();
-        }, 250);
-        return true;
+    generateReceiptHtml(order, isKot = false) {
+        if (!order) return '';
+
+        if (isKot) {
+            const items = order.items || [];
+            const now = order.created_at ? new Date(order.created_at) : new Date();
+            const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+            let itemsHtml = '';
+            for (const item of items) {
+                const name = item.product?.name || item.name || 'Menu';
+                const notes = item.notes ? `<div style="font-size:9px; font-style:italic; padding-left:12px;">➔ Catatan: ${item.notes}</div>` : '';
+                itemsHtml += `
+                    <div style="padding: 2px 0;">
+                        <div style="font-weight:700; font-size:11px;">[ ] ${item.quantity}x ${name}</div>
+                        ${notes}
+                    </div>
+                `;
+            }
+
+            return `
+                <div style="text-align:center; padding-bottom:4px; border-bottom:1px dashed #000;">
+                    <h2 style="font-size:13px; font-weight:800; margin:0; text-transform:uppercase;">TIKET DAPUR (KOT)</h2>
+                    <p style="font-size:10px; font-weight:700; margin:2px 0 0 0;">${order.table_name || order.customer_name || 'Dine-In'}</p>
+                </div>
+                <div style="padding:4px 0; border-bottom:1px dashed #000; font-size:10px; line-height:1.3;">
+                    <div style="display:flex; justify-content:space-between;"><span>Tipe:</span><strong style="text-transform:uppercase;">${order.order_type || 'DINE_IN'}</strong></div>
+                    <div style="display:flex; justify-content:space-between;"><span>Waktu:</span><span>${timeStr}</span></div>
+                </div>
+                <div style="padding:4px 0; border-bottom:1px dashed #000;">
+                    ${itemsHtml}
+                </div>
+                <div style="text-align:center; padding-top:6px; font-size:10px; font-weight:700;">
+                    *** SEGERA DISAJIKAN PANAS ***
+                </div>
+            `;
+        }
+
+        const items = order.items || [];
+        const now = order.created_at ? new Date(order.created_at) : new Date();
+        const dateStr = now.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+        let itemsHtml = '';
+        for (const item of items) {
+            const name = item.product?.name || item.name || 'Menu';
+            const qty = Number(item.quantity || 1);
+            const unitPrice = item.unit_price != null ? Number(item.unit_price) : 0;
+            const subtotalVal = item.subtotal != null ? Number(item.subtotal) : (qty * unitPrice);
+            const notes = item.notes ? `<div style="font-size:9px; font-style:italic; padding-left:8px;">* ${item.notes}</div>` : '';
+
+            itemsHtml += `
+                <div style="padding:2px 0;">
+                    <div style="font-weight:700; font-size:11px;">${name}</div>
+                    <div style="display:flex; justify-content:space-between; font-size:10px;">
+                        <span>${qty} x ${unitPrice.toLocaleString('id-ID')}</span>
+                        <span style="font-weight:700;">${subtotalVal.toLocaleString('id-ID')}</span>
+                    </div>
+                    ${notes}
+                </div>
+            `;
+        }
+
+        const totalAmount = Number(order.total_amount || 0);
+        const discountAmount = Number(order.discount_amount || 0);
+        const taxAmount = Number(order.tax_amount || 0);
+        const finalAmount = Number(order.final_amount || 0);
+        const paymentMethod = order.payment?.method || (order.payments && order.payments[0]?.payment_method) || (order.payments && order.payments[0]?.method) || 'CASH';
+
+        let discountRow = discountAmount > 0 ? `<div style="display:flex; justify-content:space-between;"><span>Diskon:</span><span>-${discountAmount.toLocaleString('id-ID')}</span></div>` : '';
+        let taxRow = taxAmount > 0 ? `<div style="display:flex; justify-content:space-between;"><span>Pajak:</span><span>${taxAmount.toLocaleString('id-ID')}</span></div>` : '';
+
+        let cashRow = '';
+        if (paymentMethod === 'CASH') {
+            const cashVal = order.cashGiven || (order.payments && order.payments[0]?.amount) || finalAmount || 0;
+            const changeVal = order.changeDue || 0;
+            cashRow = `
+                <div style="display:flex; justify-content:space-between;"><span>Bayar Tunai:</span><span>${Number(cashVal).toLocaleString('id-ID')}</span></div>
+                ${changeVal > 0 ? `<div style="display:flex; justify-content:space-between;"><span>Kembalian:</span><span>${Number(changeVal).toLocaleString('id-ID')}</span></div>` : ''}
+            `;
+        }
+
+        return `
+            <div style="text-align:center; padding-bottom:4px; border-bottom:1px dashed #000;">
+                <h2 style="font-size:12px; font-weight:800; margin:0; text-transform:uppercase; letter-spacing:0.5px;">SOTO LAMONGAN LESTARI</h2>
+                <p style="font-size:10px; font-weight:600; margin:2px 0 0 0;">Cabang Utama</p>
+                <p style="font-size:10px; font-weight:600; margin:1px 0 0 0;">Telp: 0852-1325-4219</p>
+            </div>
+            <div style="padding:4px 0; border-bottom:1px dashed #000; font-size:10px; line-height:1.3;">
+                <div style="display:flex; justify-content:space-between;"><span>No:</span><strong style="font-weight:700;">${order.order_number || ''}</strong></div>
+                <div style="display:flex; justify-content:space-between;"><span>Waktu:</span><span>${dateStr} ${timeStr}</span></div>
+                ${order.customer_name ? `<div style="display:flex; justify-content:space-between;"><span>Pelanggan:</span><span>${order.customer_name}</span></div>` : ''}
+            </div>
+            <div style="padding:4px 0; border-bottom:1px dashed #000;">
+                ${itemsHtml}
+            </div>
+            <div style="padding:4px 0; border-bottom:1px dashed #000; font-size:10px; line-height:1.35;">
+                <div style="display:flex; justify-content:space-between;"><span>Subtotal:</span><span>${totalAmount.toLocaleString('id-ID')}</span></div>
+                ${discountRow}
+                ${taxRow}
+                <div style="display:flex; justify-content:space-between; font-weight:800; font-size:12px; padding-top:3px; border-top:1px dotted #000;">
+                    <span>TOTAL:</span>
+                    <span>Rp${finalAmount.toLocaleString('id-ID')}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; padding-top:2px;"><span>Metode:</span><span>${paymentMethod}</span></div>
+                ${cashRow}
+            </div>
+            <div style="text-align:center; padding-top:6px; font-size:10px; line-height:1.3; font-weight:600;">
+                <div style="font-weight:700;">Terima Kasih Atas Kunjungan Anda!</div>
+                <div>Rasa Mantap, Harga Bersahabat</div>
+                <div style="font-size:9px; padding-top:3px; color:#555;">SLL Smart POS Cloud</div>
+            </div>
+        `;
+    }
+
+    /**
+     * Fallback Cetak via Browser (Dengan Iframe Terisolasi 58mm)
+     * Solusi 100% anti-terpotong untuk Google Chrome Android & RawBT Print Service:
+     * Menghilangkan seluruh konflik height: 100vh / overflow: hidden dari layout utama.
+     */
+    printBrowser(order, isKot = false) {
+        try {
+            // Ambil konten dari elemen DOM atau generate langsung dari data order
+            let contentHtml = '';
+            const targetEl = document.getElementById(isKot ? 'printable-kot' : 'printable-receipt');
+            if (targetEl && targetEl.innerHTML.trim().length > 30) {
+                contentHtml = targetEl.innerHTML;
+            } else if (order) {
+                contentHtml = this.generateReceiptHtml(order, isKot);
+            }
+
+            if (!contentHtml) {
+                setTimeout(() => window.print(), 150);
+                return true;
+            }
+
+            // Gunakan iframe terisolasi yang bersih dari parent CSS / height lock
+            let iframe = document.getElementById('thermal-print-iframe');
+            if (iframe) {
+                iframe.remove();
+            }
+
+            iframe = document.createElement('iframe');
+            iframe.id = 'thermal-print-iframe';
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = 'none';
+            iframe.style.opacity = '0';
+            iframe.style.zIndex = '-9999';
+            document.body.appendChild(iframe);
+
+            const doc = iframe.contentWindow.document;
+            doc.open();
+            doc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <title>${isKot ? 'KOT' : 'Struk'}</title>
+                    <style>
+                        @page {
+                            size: 58mm auto;
+                            margin: 0mm !important;
+                        }
+                        * {
+                            box-sizing: border-box !important;
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                            page-break-inside: auto !important;
+                            break-inside: auto !important;
+                        }
+                        html, body {
+                            width: 48mm !important;
+                            max-width: 48mm !important;
+                            margin: 0 auto !important;
+                            padding: 1mm 1.5mm 6mm 1.5mm !important;
+                            background: #ffffff !important;
+                            color: #000000 !important;
+                            font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important;
+                            font-size: 10px !important;
+                            font-weight: 600 !important;
+                            line-height: 1.25 !important;
+                            height: auto !important;
+                            min-height: 0 !important;
+                            max-height: none !important;
+                            overflow: visible !important;
+                        }
+                        div, p, span, h1, h2, h3 {
+                            overflow: visible !important;
+                            height: auto !important;
+                            min-height: 0 !important;
+                        }
+                        .flex { display: flex !important; }
+                        .justify-between { justify-content: space-between !important; }
+                        .text-center { text-align: center !important; }
+                        .font-bold { font-weight: 700 !important; }
+                        .border-b { border-bottom: 1px dashed #000 !important; }
+                        .border-t { border-top: 1px dashed #000 !important; }
+                    </style>
+                </head>
+                <body>
+                    <div style="width: 48mm; margin: 0 auto;">
+                        ${contentHtml}
+                    </div>
+                </body>
+                </html>
+            `);
+            doc.close();
+
+            setTimeout(() => {
+                try {
+                    iframe.contentWindow.focus();
+                    iframe.contentWindow.print();
+                } catch (e) {
+                    console.warn('Iframe print fallback to window.print():', e);
+                    window.print();
+                }
+            }, 250);
+
+            return true;
+        } catch (err) {
+            console.error('Error in printBrowser:', err);
+            setTimeout(() => window.print(), 100);
+            return false;
+        }
     }
 
     /**

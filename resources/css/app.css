@@ -247,11 +247,25 @@ button, a {
 
 @media print {
     /* 1. Reset Root & Body untuk Kertas Thermal 58mm */
+    @page {
+        size: 58mm auto;
+        margin: 0mm !important;
+    }
+
+    /* Reset SEMUA elemen global agar tidak ada kontainer yang terkunci height: 100vh atau overflow: hidden */
+    *, *::before, *::after {
+        overflow: visible !important;
+        max-height: none !important;
+        box-sizing: border-box !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
     html,
     body {
-        width: 58mm !important;
+        width: 100% !important;
         max-width: 58mm !important;
-        min-width: 58mm !important;
+        min-width: 0 !important;
         height: auto !important;
         min-height: 0 !important;
         max-height: none !important;
@@ -266,8 +280,6 @@ button, a {
         font-size: 10px !important;
         font-weight: 600 !important;
         line-height: 1.25 !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
     }
 
     /* 2. Sembunyikan TOTAL seluruh UI aplikasi dengan display: none (Bukan visibility: hidden agar tidak memicu ghost height / 2 halaman) */
@@ -300,10 +312,16 @@ button, a {
     body,
     body > div,
     main,
+    div,
+    section,
+    article,
     .min-h-screen,
     .h-screen,
     .w-screen,
-    .h-full {
+    .h-full,
+    .overflow-hidden,
+    .overflow-y-auto,
+    .overflow-x-hidden {
         height: auto !important;
         min-height: 0 !important;
         max-height: none !important;
@@ -335,11 +353,13 @@ button, a {
         font-size: 10px !important;
         font-weight: 600 !important;
         line-height: 1.25 !important;
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-        page-break-after: avoid !important;
-        break-after: avoid !important;
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+        page-break-after: auto !important;
+        break-after: auto !important;
         overflow: visible !important;
+        height: auto !important;
+        min-height: 0 !important;
     }
 
     body:not(.print-kot) #printable-receipt * {
@@ -349,6 +369,8 @@ button, a {
         background: transparent !important;
         box-sizing: border-box !important;
         -webkit-text-stroke: 0.1px #000000;
+        page-break-inside: auto !important;
+        break-inside: auto !important;
     }
 
     /* 4. Kontainer Tiket Dapur (KOT) 58mm (Mode Dapur: body.print-kot) */
@@ -369,11 +391,13 @@ button, a {
         font-size: 10px !important;
         font-weight: 700 !important;
         line-height: 1.25 !important;
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-        page-break-after: avoid !important;
-        break-after: avoid !important;
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+        page-break-after: auto !important;
+        break-after: auto !important;
         overflow: visible !important;
+        height: auto !important;
+        min-height: 0 !important;
     }
 
     body.print-kot #printable-kot * {
@@ -383,6 +407,8 @@ button, a {
         background: transparent !important;
         box-sizing: border-box !important;
         -webkit-text-stroke: 0.1px #000000;
+        page-break-inside: auto !important;
+        break-inside: auto !important;
     }
 
     /* Sembunyikan KOT saat cetak struk kasir biasa */

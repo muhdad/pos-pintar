@@ -393,7 +393,7 @@
     </div> <!-- /#backoffice-orders-ui -->
 
     <!-- Hidden Printable Thermal Receipt Container for Backoffice (58mm / 80mm standard) -->
-    <div id="printable-receipt" class="print-only text-black font-mono select-none" style="width: 48mm; max-width: 48mm; margin: 0 auto; page-break-inside: avoid; break-inside: avoid;">
+    <div id="printable-receipt" class="print-only text-black font-mono select-none" style="width: 48mm; max-width: 48mm; margin: 0 auto;">
         <div class="text-center pb-2 border-b border-dashed border-black">
             <h2 class="text-xs font-bold tracking-wider uppercase text-black">SOTO LAMONGAN LESTARI</h2>
             <p class="text-[10px] mt-0.5 font-semibold text-black">Cabang Utama</p>
