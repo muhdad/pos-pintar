@@ -35,6 +35,13 @@
             this.selectedOrder = found || null;
             this.openedAt = Date.now();
             this.detailModalOpen = true;
+
+            // Auto print struk saat "Buka Struk" ditekan tanpa perlu tap tambahan
+            this.$nextTick(() => {
+                setTimeout(() => {
+                    this.printCurrentReceipt();
+                }, 200);
+            });
         },
 
         closeModalBackdrop() {
@@ -60,7 +67,7 @@
             }
             setTimeout(() => {
                 window.print();
-            }, 50);
+            }, 250);
         }
     }">
         <div id="backoffice-orders-ui" class="space-y-5">

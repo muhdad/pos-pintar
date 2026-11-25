@@ -274,7 +274,6 @@ button, a {
     #pos-app-ui,
     #backoffice-orders-ui,
     header,
-    main,
     aside,
     nav,
     footer,
@@ -297,25 +296,25 @@ button, a {
         visibility: hidden !important;
     }
 
-    /* Reset seluruh parent wrapper layout jika ada */
+    /* Reset seluruh parent wrapper layout agar tidak memotong kontainer struk */
+    body,
+    body > div,
+    main,
+    .min-h-screen,
     .h-screen,
     .w-screen,
     .h-full {
         height: auto !important;
         min-height: 0 !important;
         max-height: none !important;
-        width: auto !important;
+        width: 100% !important;
         overflow: visible !important;
         position: static !important;
         display: block !important;
-    }
-
-    /* Sembunyikan div wrapper saudara selain receipt & kot */
-    body > div:not(#printable-receipt):not(#printable-kot) {
-        display: none !important;
-        height: 0 !important;
-        width: 0 !important;
-        overflow: hidden !important;
+        float: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
     }
 
     /* 3. Kontainer Struk Kasir Pelanggan 58mm (Mode Normal: bukan KOT) */

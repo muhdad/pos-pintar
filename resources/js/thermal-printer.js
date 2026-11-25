@@ -271,13 +271,16 @@ export class ThermalPrinter {
         if (this.isConnected && this.connectionType === 'bluetooth' && this.characteristic) {
             try {
                 const data = this.buildKotEscPosBytes(order);
-                const CHUNK_SIZE = 512;
+                const CHUNK_SIZE = 64;
                 for (let i = 0; i < data.length; i += CHUNK_SIZE) {
                     const chunk = data.slice(i, i + CHUNK_SIZE);
                     if (this.characteristic.writeValueWithoutResponse) {
                         await this.characteristic.writeValueWithoutResponse(chunk);
                     } else {
                         await this.characteristic.writeValue(chunk);
+                    }
+                    if (i + CHUNK_SIZE < data.length) {
+                        await new Promise(r => setTimeout(r, 35));
                     }
                 }
                 return true;
@@ -372,7 +375,7 @@ export class ThermalPrinter {
     printBrowser(order) {
         setTimeout(() => {
             window.print();
-        }, 80);
+        }, 250);
         return true;
     }
 
@@ -423,8 +426,12 @@ export class ThermalPrinter {
             buffer.push(...encoder.encode(`${name}\n`));
             buffer.push(ESC, 0x45, 0x00);
 
-            const qtyPrice = `${item.quantity} x ${Number(item.unit_price).toLocaleString('id-ID')}`;
-            const subtotal = `${Number(item.subtotal).toLocaleString('id-ID')}`;
+            const qty = Number(item.quantity || 1);
+            const unitPrice = item.unit_price != null ? Number(item.unit_price) : 0;
+            const subtotalVal = item.subtotal != null ? Number(item.subtotal) : (qty * unitPrice);
+
+            const qtyPrice = `${qty} x ${unitPrice.toLocaleString('id-ID')}`;
+            const subtotal = `${subtotalVal.toLocaleString('id-ID')}`;
             const spaces = Math.max(1, maxCols - qtyPrice.length - subtotal.length);
             buffer.push(...encoder.encode(`${qtyPrice}${' '.repeat(spaces)}${subtotal}\n`));
 
@@ -452,14 +459,16 @@ export class ThermalPrinter {
         buffer.push(...encoder.encode(formatRow('TOTAL', 'Rp' + Number(order.final_amount || 0).toLocaleString('id-ID'))));
         buffer.push(ESC, 0x45, 0x00);
 
-        const paymentMethod = order.payment?.method || (order.payments && order.payments[0]?.method) || 'CASH';
+        const paymentMethod = order.payment?.method || (order.payments && order.payments[0]?.payment_method) || (order.payments && order.payments[0]?.method) || 'CASH';
         buffer.push(...encoder.encode(formatRow('Metode', paymentMethod)));
 
         if (paymentMethod === 'CASH') {
-            const cashVal = order.cashGiven || order.final_amount || 0;
+            const cashVal = order.cashGiven || (order.payments && order.payments[0]?.amount) || order.final_amount || 0;
             const changeVal = order.changeDue || 0;
             buffer.push(...encoder.encode(formatRow('Bayar Tunai', Number(cashVal).toLocaleString('id-ID'))));
-            buffer.push(...encoder.encode(formatRow('Kembalian', Number(changeVal).toLocaleString('id-ID'))));
+            if (Number(changeVal) > 0) {
+                buffer.push(...encoder.encode(formatRow('Kembalian', Number(changeVal).toLocaleString('id-ID'))));
+            }
         }
 
         // Footer (Center)
@@ -468,8 +477,8 @@ export class ThermalPrinter {
         buffer.push(...encoder.encode('Rasa Mantap, Harga Bersahabat\n'));
         buffer.push(...encoder.encode('Terima Kasih Atas Kunjungan Anda!\n\n\n\n'));
 
-        // Cut paper command
-        buffer.push(GS, 0x56, 0x41, 0x10);
+        // Feed paper 3 lines past tear bar on 58mm manual tear printers (ESC d 3)
+        buffer.push(ESC, 0x64, 0x03);
 
         return new Uint8Array(buffer);
     }
@@ -480,13 +489,16 @@ export class ThermalPrinter {
     async sendEscPosBluetooth(order) {
         try {
             const data = this.buildEscPosBytes(order);
-            const CHUNK_SIZE = 512;
+            const CHUNK_SIZE = 64;
             for (let i = 0; i < data.length; i += CHUNK_SIZE) {
                 const chunk = data.slice(i, i + CHUNK_SIZE);
                 if (this.characteristic.writeValueWithoutResponse) {
                     await this.characteristic.writeValueWithoutResponse(chunk);
                 } else {
                     await this.characteristic.writeValue(chunk);
+                }
+                if (i + CHUNK_SIZE < data.length) {
+                    await new Promise(r => setTimeout(r, 35));
                 }
             }
             return true;
