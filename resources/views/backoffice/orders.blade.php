@@ -10,66 +10,70 @@
                 if (o.id) window.BACKOFFICE_ORDERS_MAP[String(o.id)] = o;
             }
         });
+
+        function backofficeOrdersHandler() {
+            return {
+                ordersList: window.BACKOFFICE_ORDERS || [],
+                detailModalOpen: false,
+                selectedOrder: null,
+                openedAt: 0,
+                useRawBt: localStorage.getItem('POS_USE_RAWBT') === 'true',
+
+                init() {
+                    if (window.thermalPrinter) {
+                        this.useRawBt = window.thermalPrinter.useRawBt;
+                    }
+                },
+
+                openDetail(key) {
+                    if (!key) return;
+                    const keyStr = String(key);
+                    const found = (window.BACKOFFICE_ORDERS_MAP && window.BACKOFFICE_ORDERS_MAP[keyStr])
+                        ? window.BACKOFFICE_ORDERS_MAP[keyStr]
+                        : (this.ordersList || []).find(o => String(o?.id) === keyStr || String(o?.order_number) === keyStr);
+
+                    this.selectedOrder = found || null;
+                    this.openedAt = Date.now();
+                    this.detailModalOpen = true;
+
+                    // Auto print struk saat Buka Struk ditekan
+                    this.$nextTick(() => {
+                        setTimeout(() => {
+                            this.printCurrentReceipt();
+                        }, 200);
+                    });
+                },
+
+                closeModalBackdrop() {
+                    if (Date.now() - (this.openedAt || 0) > 300) {
+                        this.detailModalOpen = false;
+                    }
+                },
+
+                toggleRawBtMode() {
+                    if (window.thermalPrinter) {
+                        this.useRawBt = window.thermalPrinter.toggleRawBt();
+                    } else {
+                        this.useRawBt = !this.useRawBt;
+                        localStorage.setItem('POS_USE_RAWBT', this.useRawBt ? 'true' : 'false');
+                    }
+                },
+
+                printCurrentReceipt() {
+                    if (!this.selectedOrder) return;
+                    if (window.thermalPrinter) {
+                        window.thermalPrinter.printReceipt(this.selectedOrder);
+                        return;
+                    }
+                    setTimeout(() => {
+                        window.print();
+                    }, 250);
+                }
+            };
+        }
     </script>
 
-    <div x-data="{
-        ordersList: window.BACKOFFICE_ORDERS || [],
-        detailModalOpen: false,
-        selectedOrder: null,
-        openedAt: 0,
-        useRawBt: localStorage.getItem('POS_USE_RAWBT') === 'true',
-
-        init() {
-            if (window.thermalPrinter) {
-                this.useRawBt = window.thermalPrinter.useRawBt;
-            }
-        },
-
-        openDetail(key) {
-            if (!key) return;
-            const keyStr = String(key);
-            const found = (window.BACKOFFICE_ORDERS_MAP && window.BACKOFFICE_ORDERS_MAP[keyStr])
-                ? window.BACKOFFICE_ORDERS_MAP[keyStr]
-                : (this.ordersList || []).find(o => String(o?.id) === keyStr || String(o?.order_number) === keyStr);
-
-            this.selectedOrder = found || null;
-            this.openedAt = Date.now();
-            this.detailModalOpen = true;
-
-            // Auto print struk saat "Buka Struk" ditekan tanpa perlu tap tambahan
-            this.$nextTick(() => {
-                setTimeout(() => {
-                    this.printCurrentReceipt();
-                }, 200);
-            });
-        },
-
-        closeModalBackdrop() {
-            if (Date.now() - (this.openedAt || 0) > 300) {
-                this.detailModalOpen = false;
-            }
-        },
-
-        toggleRawBtMode() {
-            if (window.thermalPrinter) {
-                this.useRawBt = window.thermalPrinter.toggleRawBt();
-            } else {
-                this.useRawBt = !this.useRawBt;
-                localStorage.setItem('POS_USE_RAWBT', this.useRawBt ? 'true' : 'false');
-            }
-        },
-
-        printCurrentReceipt() {
-            if (!this.selectedOrder) return;
-            if (window.thermalPrinter) {
-                window.thermalPrinter.printReceipt(this.selectedOrder);
-                return;
-            }
-            setTimeout(() => {
-                window.print();
-            }, 250);
-        }
-    }">
+    <div x-data="backofficeOrdersHandler()">
         <div id="backoffice-orders-ui" class="space-y-5">
             <!-- Page Header -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-stone-200/80">
