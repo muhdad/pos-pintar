@@ -312,22 +312,18 @@ export class ThermalPrinter {
         const maxCols = this.paperWidth === 80 ? 42 : 32;
 
         let buffer = [];
-        buffer.push(ESC, 0x40); // Reset
+        buffer.push(ESC, 0x40); // Reset (standar ESC/POS universal)
 
-        // 1. Naikkan waktu pemanasan thermal head (ESC 7 n1 n2 n3)
-        buffer.push(ESC, 0x37, 0x07, 0xa0, 0x02);
-        // 2. Aktifkan Double-Strike Mode (ESC G 1) agar titik dibakar 2x (hitam pekat dan tidak putus-putus)
-        buffer.push(ESC, 0x47, 0x01);
-        // 3. Set Print Density Maksimal (GS D 4)
-        buffer.push(GS, 0x44, 0x04);
-        // 4. Emphasized Mode (ESC E 1)
-        buffer.push(ESC, 0x45, 0x01);
-
-        // Header KOT
+        // Header KOT (standar ESC E Bold + GS ! Double Size tanpa perintah non-standar yang memicu karakter aneh di RawBT)
         buffer.push(ESC, 0x61, 0x01); // Center
         buffer.push(ESC, 0x45, 0x01); // Bold on
-        buffer.push(GS, 0x21, 0x11);  // Double size
-        buffer.push(...encoder.encode('TIKET DAPUR (KOT)\n'));
+        buffer.push(GS, 0x21, 0x11);  // Double size (58mm max 16 chars/baris)
+        if (maxCols < 42) {
+            buffer.push(...encoder.encode('TIKET DAPUR\n'));
+            buffer.push(...encoder.encode('(KOT)\n'));
+        } else {
+            buffer.push(...encoder.encode('TIKET DAPUR (KOT)\n'));
+        }
         buffer.push(GS, 0x21, 0x00);  // Normal size
         buffer.push(ESC, 0x45, 0x00); // Bold off
 
@@ -350,7 +346,7 @@ export class ThermalPrinter {
             buffer.push(...encoder.encode(`[ ] ${item.quantity}x ${name}\n`));
             buffer.push(ESC, 0x45, 0x00);
             if (item.notes) {
-                buffer.push(...encoder.encode(`    ➔ CATATAN: ${item.notes}\n`));
+                buffer.push(...encoder.encode(`    > CATATAN: ${item.notes}\n`));
             }
         }
 
@@ -360,8 +356,8 @@ export class ThermalPrinter {
         buffer.push(...encoder.encode('*** SEGERA DISAJIKAN PANAS ***\n\n\n\n'));
         buffer.push(ESC, 0x45, 0x00);
 
-        // Cut
-        buffer.push(GS, 0x56, 0x41, 0x10);
+        // Feed paper 5 lines past tear bar
+        buffer.push(ESC, 0x64, 0x05);
         return new Uint8Array(buffer);
     }
 
@@ -389,18 +385,18 @@ export class ThermalPrinter {
             }
 
             return `
-                <div style="text-align:center; padding-bottom:4px; border-bottom:1px dashed #000;">
-                    <h2 style="font-size:13px; font-weight:800; margin:0; text-transform:uppercase;">TIKET DAPUR (KOT)</h2>
-                    <p style="font-size:10px; font-weight:700; margin:2px 0 0 0;">${order.table_name || order.customer_name || 'Dine-In'}</p>
+                <div style="text-align:center; padding-bottom:5px; border-bottom:1.5px dashed #000;">
+                    <h2 style="font-size:15px; font-weight:900; margin:0; text-transform:uppercase;">TIKET DAPUR (KOT)</h2>
+                    <p style="font-size:12px; font-weight:800; margin:2px 0 0 0;">${order.table_name || order.customer_name || 'Dine-In'}</p>
                 </div>
-                <div style="padding:4px 0; border-bottom:1px dashed #000; font-size:10px; line-height:1.3;">
-                    <div style="display:flex; justify-content:space-between;"><span>Tipe:</span><strong style="text-transform:uppercase;">${order.order_type || 'DINE_IN'}</strong></div>
-                    <div style="display:flex; justify-content:space-between;"><span>Waktu:</span><span>${timeStr}</span></div>
+                <div style="padding:5px 0; border-bottom:1.5px dashed #000; font-size:11.5px; font-weight:700; line-height:1.35;">
+                    <div style="display:flex; justify-content:space-between; gap:6px;"><span>Tipe:</span><strong style="text-transform:uppercase; font-weight:800;">${order.order_type || 'DINE_IN'}</strong></div>
+                    <div style="display:flex; justify-content:space-between; gap:6px;"><span>Waktu:</span><span>${timeStr}</span></div>
                 </div>
-                <div style="padding:4px 0; border-bottom:1px dashed #000;">
+                <div style="padding:5px 0; border-bottom:1.5px dashed #000;">
                     ${itemsHtml}
                 </div>
-                <div style="text-align:center; padding-top:6px; font-size:10px; font-weight:700;">
+                <div style="text-align:center; padding-top:6px; font-size:11.5px; font-weight:800;">
                     *** SEGERA DISAJIKAN PANAS ***
                 </div>
             `;
@@ -417,14 +413,14 @@ export class ThermalPrinter {
             const qty = Number(item.quantity || 1);
             const unitPrice = item.unit_price != null ? Number(item.unit_price) : 0;
             const subtotalVal = item.subtotal != null ? Number(item.subtotal) : (qty * unitPrice);
-            const notes = item.notes ? `<div style="font-size:9px; font-style:italic; padding-left:8px;">* ${item.notes}</div>` : '';
+            const notes = item.notes ? `<div style="font-size:10.5px; font-weight:700; font-style:italic; padding-left:8px;">* ${item.notes}</div>` : '';
 
             itemsHtml += `
-                <div style="padding:2px 0;">
-                    <div style="font-weight:700; font-size:11px;">${name}</div>
-                    <div style="display:flex; justify-content:space-between; font-size:10px;">
+                <div style="padding:2.5px 0;">
+                    <div style="font-weight:800; font-size:12px;">${name}</div>
+                    <div style="display:flex; justify-content:space-between; gap:6px; font-size:11.5px; font-weight:700; font-variant-numeric:tabular-nums;">
                         <span>${qty} x ${unitPrice.toLocaleString('id-ID')}</span>
-                        <span style="font-weight:700;">${subtotalVal.toLocaleString('id-ID')}</span>
+                        <span style="font-weight:800;">${subtotalVal.toLocaleString('id-ID')}</span>
                     </div>
                     ${notes}
                 </div>
@@ -437,48 +433,48 @@ export class ThermalPrinter {
         const finalAmount = Number(order.final_amount || 0);
         const paymentMethod = order.payment?.method || (order.payments && order.payments[0]?.payment_method) || (order.payments && order.payments[0]?.method) || 'CASH';
 
-        let discountRow = discountAmount > 0 ? `<div style="display:flex; justify-content:space-between;"><span>Diskon:</span><span>-${discountAmount.toLocaleString('id-ID')}</span></div>` : '';
-        let taxRow = taxAmount > 0 ? `<div style="display:flex; justify-content:space-between;"><span>Pajak:</span><span>${taxAmount.toLocaleString('id-ID')}</span></div>` : '';
+        let discountRow = discountAmount > 0 ? `<div style="display:flex; justify-content:space-between; gap:6px;"><span>Diskon:</span><span>-${discountAmount.toLocaleString('id-ID')}</span></div>` : '';
+        let taxRow = taxAmount > 0 ? `<div style="display:flex; justify-content:space-between; gap:6px;"><span>Pajak:</span><span>${taxAmount.toLocaleString('id-ID')}</span></div>` : '';
 
         let cashRow = '';
         if (paymentMethod === 'CASH') {
             const cashVal = order.cashGiven || (order.payments && order.payments[0]?.amount) || finalAmount || 0;
             const changeVal = order.changeDue || 0;
             cashRow = `
-                <div style="display:flex; justify-content:space-between;"><span>Bayar Tunai:</span><span>${Number(cashVal).toLocaleString('id-ID')}</span></div>
-                ${changeVal > 0 ? `<div style="display:flex; justify-content:space-between;"><span>Kembalian:</span><span>${Number(changeVal).toLocaleString('id-ID')}</span></div>` : ''}
+                <div style="display:flex; justify-content:space-between; gap:6px;"><span>Bayar Tunai:</span><span>${Number(cashVal).toLocaleString('id-ID')}</span></div>
+                ${changeVal > 0 ? `<div style="display:flex; justify-content:space-between; gap:6px;"><span>Kembalian:</span><span>${Number(changeVal).toLocaleString('id-ID')}</span></div>` : ''}
             `;
         }
 
         return `
-            <div style="text-align:center; padding-bottom:4px; border-bottom:1px dashed #000;">
-                <h2 style="font-size:12px; font-weight:800; margin:0; text-transform:uppercase; letter-spacing:0.5px;">SOTO LAMONGAN LESTARI</h2>
-                <p style="font-size:10px; font-weight:600; margin:2px 0 0 0;">Cabang Utama</p>
-                <p style="font-size:10px; font-weight:600; margin:1px 0 0 0;">Telp: 0852-1325-4219</p>
+            <div style="text-align:center; padding-bottom:5px; border-bottom:1.5px dashed #000;">
+                <h2 style="font-size:14px; font-weight:900; margin:0; text-transform:uppercase; letter-spacing:0.3px;">SOTO LAMONGAN LESTARI</h2>
+                <p style="font-size:11.5px; font-weight:700; margin:2px 0 0 0;">Cabang Utama</p>
+                <p style="font-size:11.5px; font-weight:700; margin:1px 0 0 0;">Telp: 0852-1325-4219</p>
             </div>
-            <div style="padding:4px 0; border-bottom:1px dashed #000; font-size:10px; line-height:1.3;">
-                <div style="display:flex; justify-content:space-between;"><span>No:</span><strong style="font-weight:700;">${order.order_number || ''}</strong></div>
-                <div style="display:flex; justify-content:space-between;"><span>Waktu:</span><span>${dateStr} ${timeStr}</span></div>
-                ${order.customer_name ? `<div style="display:flex; justify-content:space-between;"><span>Pelanggan:</span><span>${order.customer_name}</span></div>` : ''}
+            <div style="padding:5px 0; border-bottom:1.5px dashed #000; font-size:11px; font-weight:700; line-height:1.35; font-variant-numeric:tabular-nums;">
+                <div style="display:flex; justify-content:space-between; gap:6px;"><span style="white-space:nowrap;">No:</span><strong style="font-weight:800; text-align:right;">${order.order_number || ''}</strong></div>
+                <div style="display:flex; justify-content:space-between; gap:6px;"><span style="white-space:nowrap;">Waktu:</span><span style="text-align:right;">${dateStr} ${timeStr}</span></div>
+                ${order.customer_name ? `<div style="display:flex; justify-content:space-between; gap:6px;"><span style="white-space:nowrap;">Pelanggan:</span><span style="text-align:right;">${order.customer_name}</span></div>` : ''}
             </div>
-            <div style="padding:4px 0; border-bottom:1px dashed #000;">
+            <div style="padding:5px 0; border-bottom:1.5px dashed #000;">
                 ${itemsHtml}
             </div>
-            <div style="padding:4px 0; border-bottom:1px dashed #000; font-size:10px; line-height:1.35;">
-                <div style="display:flex; justify-content:space-between;"><span>Subtotal:</span><span>${totalAmount.toLocaleString('id-ID')}</span></div>
+            <div style="padding:5px 0; border-bottom:1.5px dashed #000; font-size:11.5px; font-weight:700; line-height:1.4; font-variant-numeric:tabular-nums;">
+                <div style="display:flex; justify-content:space-between; gap:6px;"><span>Subtotal:</span><span>${totalAmount.toLocaleString('id-ID')}</span></div>
                 ${discountRow}
                 ${taxRow}
-                <div style="display:flex; justify-content:space-between; font-weight:800; font-size:12px; padding-top:3px; border-top:1px dotted #000;">
+                <div style="display:flex; justify-content:space-between; gap:6px; font-weight:900; font-size:13.5px; padding-top:4px; margin-top:2px; border-top:1.5px dotted #000;">
                     <span>TOTAL:</span>
                     <span>Rp${finalAmount.toLocaleString('id-ID')}</span>
                 </div>
-                <div style="display:flex; justify-content:space-between; padding-top:2px;"><span>Metode:</span><span>${paymentMethod}</span></div>
+                <div style="display:flex; justify-content:space-between; gap:6px; padding-top:3px;"><span>Metode:</span><span>${paymentMethod}</span></div>
                 ${cashRow}
             </div>
-            <div style="text-align:center; padding-top:6px; font-size:10px; line-height:1.3; font-weight:600;">
-                <div style="font-weight:700;">Terima Kasih Atas Kunjungan Anda!</div>
+            <div style="text-align:center; padding-top:6px; font-size:11px; line-height:1.35; font-weight:700;">
+                <div style="font-weight:800;">Terima Kasih Atas Kunjungannya!</div>
                 <div>Rasa Mantap, Harga Bersahabat</div>
-                <div style="font-size:9px; padding-top:3px; color:#555;">SLL Smart POS Cloud</div>
+                <div style="font-size:10px; font-weight:700; padding-top:3px; color:#000000;">SLL Smart POS Cloud</div>
             </div>
         `;
     }
@@ -541,8 +537,12 @@ export class ThermalPrinter {
                         }
                         * {
                             box-sizing: border-box !important;
+                            color: #000000 !important;
+                            border-color: #000000 !important;
                             -webkit-print-color-adjust: exact !important;
                             print-color-adjust: exact !important;
+                            -webkit-font-smoothing: none !important;
+                            -webkit-text-stroke: 0.25px #000000 !important;
                             page-break-inside: auto !important;
                             break-inside: auto !important;
                         }
@@ -550,13 +550,13 @@ export class ThermalPrinter {
                             width: 48mm !important;
                             max-width: 48mm !important;
                             margin: 0 auto !important;
-                            padding: 1mm 1.5mm 6mm 1.5mm !important;
+                            padding: 1mm 1mm 6mm 1mm !important;
                             background: #ffffff !important;
                             color: #000000 !important;
-                            font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important;
-                            font-size: 10px !important;
-                            font-weight: 600 !important;
-                            line-height: 1.25 !important;
+                            font-family: 'Roboto', Arial, Helvetica, sans-serif !important;
+                            font-size: 11.5px !important;
+                            font-weight: 700 !important;
+                            line-height: 1.3 !important;
                             height: auto !important;
                             min-height: 0 !important;
                             max-height: none !important;
@@ -613,24 +613,23 @@ export class ThermalPrinter {
 
         let buffer = [];
 
-        // Inisialisasi printer (ESC @)
+        // Inisialisasi printer (ESC @ standar universal)
+        // Catatan: Perintah proprietary seperti ESC 7 / ESC G dihapus karena RawBT tidak mengenalinya
+        // dan justru mencetak karakter aneh ("áG") di awal struk.
         buffer.push(ESC, 0x40);
 
-        // ===== THERMAL DENSITY SETTINGS (agar tinta tidak pudar/putus-putus) =====
-        // ESC 7 n1 n2 n3 — Set heating time (darkness).
-        // n1=7: Max heating dots=64 (aman untuk PUTIAN POS)
-        // n2=0xa0 (160dec): Heating time = 1600µs (lebih pekat dari default 800µs)
-        // n3=0x02: Heating interval 20µs
-        buffer.push(ESC, 0x37, 0x07, 0xa0, 0x02);
-
-        // ESC G 1 — Double-Strike ON (bakar titik 2x, teks jadi tebal & tidak putus)
-        buffer.push(ESC, 0x47, 0x01);
-
         // Header Toko (Rata Tengah & Bold)
+        // Catatan: GS ! 0x11 (Double Size) hanya muat 16 karakter/baris pada kertas 58mm (32 kolom).
+        // Pecah jadi 2 baris agar "SOTO LAMONGAN LESTARI" tidak terpotong di tengah kata ("L / ESTARI").
         buffer.push(ESC, 0x61, 0x01); // Center
         buffer.push(ESC, 0x45, 0x01); // Bold on
         buffer.push(GS, 0x21, 0x11);  // Double size
-        buffer.push(...encoder.encode('SOTO LAMONGAN LESTARI\n'));
+        if (maxCols < 42) {
+            buffer.push(...encoder.encode('SOTO LAMONGAN\n'));
+            buffer.push(...encoder.encode('LESTARI\n'));
+        } else {
+            buffer.push(...encoder.encode('SOTO LAMONGAN LESTARI\n'));
+        }
         buffer.push(GS, 0x21, 0x00);  // Normal size
         buffer.push(ESC, 0x45, 0x00); // Bold off
 
@@ -704,11 +703,11 @@ export class ThermalPrinter {
             }
         }
 
-        // Footer (Center)
+        // Footer (Center) — Pastikan <= 32 karakter agar tanda '!' tidak turun ke baris baru
         buffer.push(ESC, 0x61, 0x01);
         buffer.push(...encoder.encode('='.repeat(maxCols) + '\n'));
         buffer.push(...encoder.encode('Rasa Mantap, Harga Bersahabat\n'));
-        buffer.push(...encoder.encode('Terima Kasih Atas Kunjungan Anda!\n\n\n\n'));
+        buffer.push(...encoder.encode('Terima Kasih Atas Kunjungannya!\n\n\n\n'));
 
         // Feed paper 5 lines past tear bar on 58mm manual tear printers (ESC d 5)
         buffer.push(ESC, 0x64, 0x05);

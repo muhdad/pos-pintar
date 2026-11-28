@@ -22,80 +22,82 @@ Penyebab Umum di Tablet Android:
 2. Printer kasir Anda bertipe Bluetooth Classic 2.0/3.0 SPP (Chrome Web Bluetooth hanya mendeteksi tipe BLE).
 
 👉 Solusi Terbaik: Aktifkan "Mode RawBT" di menu printer untuk langsung mencetak via aplikasi RawBT.`):alert("Gagal menghubungkan printer: "+n.message),!1}}async connectUsb(){if(!navigator.usb)return alert("Browser ini belum mendukung WebUSB. Gunakan Google Chrome versi terbaru."),!1;try{this.usbDevice=await navigator.usb.requestDevice({filters:[]}),await this.usbDevice.open(),await this.usbDevice.selectConfiguration(1);let t=0,n=null;for(const r of this.usbDevice.configuration.interfaces){for(const s of r.alternates){for(const a of s.endpoints)if(a.direction==="out"&&a.type==="bulk"){t=r.interfaceNumber,n=a.endpointNumber;break}if(n)break}if(n)break}if(!n)throw new Error("Tidak menemukan USB OUT endpoint pada perangkat ini.");return await this.usbDevice.claimInterface(t),this.usbEndpoint=n,this.isConnected=!0,this.connectionType="usb",this.printerName=this.usbDevice.productName||"Thermal USB Printer",localStorage.setItem("POS_PRINTER_NAME",this.printerName),alert(`✓ Berhasil Terhubung ke ${this.printerName} via USB!
-Cetak struk akan langsung dikirim ke printer tanpa dialog browser.`),!0}catch(t){return console.error("Gagal menghubungkan USB Printer:",t),t.name!=="NotFoundError"&&alert("Gagal menghubungkan USB: "+t.message),!1}}async printReceipt(t){return t?(document.body.classList.remove("print-kot"),this.useRawBt||localStorage.getItem("POS_USE_RAWBT")==="true"?this.printRawBt(t):this.isConnected&&this.connectionType==="bluetooth"&&this.characteristic?await this.sendEscPosBluetooth(t):this.isConnected&&this.connectionType==="usb"&&this.usbDevice?await this.sendEscPosUsb(t):this.printBrowser(t)):(console.warn("Tidak ada data order untuk dicetak."),!1)}async printKitchenTicket(t){if(!t)return!1;if(this.useRawBt||localStorage.getItem("POS_USE_RAWBT")==="true")try{const n=this.buildKotEscPosBytes(t),r=this.uint8ToBase64(n);return window.location.href=`intent:base64,${r}#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;`,!0}catch(n){console.error("Gagal cetak KOT via RawBT:",n)}if(this.isConnected&&this.connectionType==="bluetooth"&&this.characteristic)try{const n=this.buildKotEscPosBytes(t),r=20;for(let s=0;s<n.length;s+=r){const a=n.slice(s,s+r);this.characteristic.writeValueWithoutResponse?await this.characteristic.writeValueWithoutResponse(a):await this.characteristic.writeValue(a),await new Promise(c=>setTimeout(c,15))}return!0}catch(n){console.error("Gagal cetak KOT via Bluetooth:",n)}if(this.isConnected&&this.connectionType==="usb"&&this.usbDevice)try{const n=this.buildKotEscPosBytes(t);return await this.usbDevice.transferOut(this.usbEndpoint,n),!0}catch(n){console.error("Gagal cetak KOT via USB:",n)}return this.printBrowser(t,!0)}buildKotEscPosBytes(t){const n=new TextEncoder,r=27,s=29,a=this.paperWidth===80?42:32;let c=[];c.push(r,64),c.push(r,55,7,160,2),c.push(r,71,1),c.push(s,68,4),c.push(r,69,1),c.push(r,97,1),c.push(r,69,1),c.push(s,33,17),c.push(...n.encode(`TIKET DAPUR (KOT)
+Cetak struk akan langsung dikirim ke printer tanpa dialog browser.`),!0}catch(t){return console.error("Gagal menghubungkan USB Printer:",t),t.name!=="NotFoundError"&&alert("Gagal menghubungkan USB: "+t.message),!1}}async printReceipt(t){return t?(document.body.classList.remove("print-kot"),this.useRawBt||localStorage.getItem("POS_USE_RAWBT")==="true"?this.printRawBt(t):this.isConnected&&this.connectionType==="bluetooth"&&this.characteristic?await this.sendEscPosBluetooth(t):this.isConnected&&this.connectionType==="usb"&&this.usbDevice?await this.sendEscPosUsb(t):this.printBrowser(t)):(console.warn("Tidak ada data order untuk dicetak."),!1)}async printKitchenTicket(t){if(!t)return!1;if(this.useRawBt||localStorage.getItem("POS_USE_RAWBT")==="true")try{const n=this.buildKotEscPosBytes(t),r=this.uint8ToBase64(n);return window.location.href=`intent:base64,${r}#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;`,!0}catch(n){console.error("Gagal cetak KOT via RawBT:",n)}if(this.isConnected&&this.connectionType==="bluetooth"&&this.characteristic)try{const n=this.buildKotEscPosBytes(t),r=20;for(let s=0;s<n.length;s+=r){const a=n.slice(s,s+r);this.characteristic.writeValueWithoutResponse?await this.characteristic.writeValueWithoutResponse(a):await this.characteristic.writeValue(a),await new Promise(c=>setTimeout(c,15))}return!0}catch(n){console.error("Gagal cetak KOT via Bluetooth:",n)}if(this.isConnected&&this.connectionType==="usb"&&this.usbDevice)try{const n=this.buildKotEscPosBytes(t);return await this.usbDevice.transferOut(this.usbEndpoint,n),!0}catch(n){console.error("Gagal cetak KOT via USB:",n)}return this.printBrowser(t,!0)}buildKotEscPosBytes(t){const n=new TextEncoder,r=27,s=29,a=this.paperWidth===80?42:32;let c=[];c.push(r,64),c.push(r,97,1),c.push(r,69,1),c.push(s,33,17),a<42?(c.push(...n.encode(`TIKET DAPUR
+`)),c.push(...n.encode(`(KOT)
+`))):c.push(...n.encode(`TIKET DAPUR (KOT)
 `)),c.push(s,33,0),c.push(r,69,0),c.push(...n.encode("=".repeat(a)+`
 `)),c.push(r,97,0);const h=(t.created_at?new Date(t.created_at):new Date).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});c.push(...n.encode(`TIPE  : ${(t.order_type||"DINE_IN").toUpperCase()}
 `)),c.push(...n.encode(`MEJA  : ${t.table_name||t.customer_name||"Dine-In"}
 `)),c.push(...n.encode(`WAKTU : ${h}
 `)),c.push(...n.encode("-".repeat(a)+`
 `));const y=t.items||[];for(const w of y){const S=w.product?.name||w.name||"Menu";c.push(r,69,1),c.push(...n.encode(`[ ] ${w.quantity}x ${S}
-`)),c.push(r,69,0),w.notes&&c.push(...n.encode(`    ➔ CATATAN: ${w.notes}
+`)),c.push(r,69,0),w.notes&&c.push(...n.encode(`    > CATATAN: ${w.notes}
 `))}return c.push(...n.encode("=".repeat(a)+`
 `)),c.push(r,97,1),c.push(r,69,1),c.push(...n.encode(`*** SEGERA DISAJIKAN PANAS ***
 
 
 
-`)),c.push(r,69,0),c.push(s,86,65,16),new Uint8Array(c)}generateReceiptHtml(t,n=!1){if(!t)return"";if(n){const $=t.items||[],K=(t.created_at?new Date(t.created_at):new Date).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});let D="";for(const O of $){const ce=O.product?.name||O.name||"Menu",H=O.notes?`<div style="font-size:9px; font-style:italic; padding-left:12px;">➔ Catatan: ${O.notes}</div>`:"";D+=`
+`)),c.push(r,69,0),c.push(r,100,5),new Uint8Array(c)}generateReceiptHtml(t,n=!1){if(!t)return"";if(n){const $=t.items||[],K=(t.created_at?new Date(t.created_at):new Date).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});let D="";for(const O of $){const ce=O.product?.name||O.name||"Menu",H=O.notes?`<div style="font-size:9px; font-style:italic; padding-left:12px;">➔ Catatan: ${O.notes}</div>`:"";D+=`
                     <div style="padding: 2px 0;">
                         <div style="font-weight:700; font-size:11px;">[ ] ${O.quantity}x ${ce}</div>
                         ${H}
                     </div>
                 `}return`
-                <div style="text-align:center; padding-bottom:4px; border-bottom:1px dashed #000;">
-                    <h2 style="font-size:13px; font-weight:800; margin:0; text-transform:uppercase;">TIKET DAPUR (KOT)</h2>
-                    <p style="font-size:10px; font-weight:700; margin:2px 0 0 0;">${t.table_name||t.customer_name||"Dine-In"}</p>
+                <div style="text-align:center; padding-bottom:5px; border-bottom:1.5px dashed #000;">
+                    <h2 style="font-size:15px; font-weight:900; margin:0; text-transform:uppercase;">TIKET DAPUR (KOT)</h2>
+                    <p style="font-size:12px; font-weight:800; margin:2px 0 0 0;">${t.table_name||t.customer_name||"Dine-In"}</p>
                 </div>
-                <div style="padding:4px 0; border-bottom:1px dashed #000; font-size:10px; line-height:1.3;">
-                    <div style="display:flex; justify-content:space-between;"><span>Tipe:</span><strong style="text-transform:uppercase;">${t.order_type||"DINE_IN"}</strong></div>
-                    <div style="display:flex; justify-content:space-between;"><span>Waktu:</span><span>${K}</span></div>
+                <div style="padding:5px 0; border-bottom:1.5px dashed #000; font-size:11.5px; font-weight:700; line-height:1.35;">
+                    <div style="display:flex; justify-content:space-between; gap:6px;"><span>Tipe:</span><strong style="text-transform:uppercase; font-weight:800;">${t.order_type||"DINE_IN"}</strong></div>
+                    <div style="display:flex; justify-content:space-between; gap:6px;"><span>Waktu:</span><span>${K}</span></div>
                 </div>
-                <div style="padding:4px 0; border-bottom:1px dashed #000;">
+                <div style="padding:5px 0; border-bottom:1.5px dashed #000;">
                     ${D}
                 </div>
-                <div style="text-align:center; padding-top:6px; font-size:10px; font-weight:700;">
+                <div style="text-align:center; padding-top:6px; font-size:11.5px; font-weight:800;">
                     *** SEGERA DISAJIKAN PANAS ***
                 </div>
-            `}const r=t.items||[],s=t.created_at?new Date(t.created_at):new Date,a=s.toLocaleDateString("id-ID",{day:"2-digit",month:"2-digit",year:"numeric"}),c=s.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});let f="";for(const $ of r){const U=$.product?.name||$.name||"Menu",K=Number($.quantity||1),D=$.unit_price!=null?Number($.unit_price):0,O=$.subtotal!=null?Number($.subtotal):K*D,ce=$.notes?`<div style="font-size:9px; font-style:italic; padding-left:8px;">* ${$.notes}</div>`:"";f+=`
-                <div style="padding:2px 0;">
-                    <div style="font-weight:700; font-size:11px;">${U}</div>
-                    <div style="display:flex; justify-content:space-between; font-size:10px;">
+            `}const r=t.items||[],s=t.created_at?new Date(t.created_at):new Date,a=s.toLocaleDateString("id-ID",{day:"2-digit",month:"2-digit",year:"numeric"}),c=s.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});let f="";for(const $ of r){const U=$.product?.name||$.name||"Menu",K=Number($.quantity||1),D=$.unit_price!=null?Number($.unit_price):0,O=$.subtotal!=null?Number($.subtotal):K*D,ce=$.notes?`<div style="font-size:10.5px; font-weight:700; font-style:italic; padding-left:8px;">* ${$.notes}</div>`:"";f+=`
+                <div style="padding:2.5px 0;">
+                    <div style="font-weight:800; font-size:12px;">${U}</div>
+                    <div style="display:flex; justify-content:space-between; gap:6px; font-size:11.5px; font-weight:700; font-variant-numeric:tabular-nums;">
                         <span>${K} x ${D.toLocaleString("id-ID")}</span>
-                        <span style="font-weight:700;">${O.toLocaleString("id-ID")}</span>
+                        <span style="font-weight:800;">${O.toLocaleString("id-ID")}</span>
                     </div>
                     ${ce}
                 </div>
-            `}const h=Number(t.total_amount||0),y=Number(t.discount_amount||0),w=Number(t.tax_amount||0),S=Number(t.final_amount||0),C=t.payment?.method||t.payments&&t.payments[0]?.payment_method||t.payments&&t.payments[0]?.method||"CASH";let A=y>0?`<div style="display:flex; justify-content:space-between;"><span>Diskon:</span><span>-${y.toLocaleString("id-ID")}</span></div>`:"",q=w>0?`<div style="display:flex; justify-content:space-between;"><span>Pajak:</span><span>${w.toLocaleString("id-ID")}</span></div>`:"",k="";if(C==="CASH"){const $=t.cashGiven||t.payments&&t.payments[0]?.amount||S||0,U=t.changeDue||0;k=`
-                <div style="display:flex; justify-content:space-between;"><span>Bayar Tunai:</span><span>${Number($).toLocaleString("id-ID")}</span></div>
-                ${U>0?`<div style="display:flex; justify-content:space-between;"><span>Kembalian:</span><span>${Number(U).toLocaleString("id-ID")}</span></div>`:""}
+            `}const h=Number(t.total_amount||0),y=Number(t.discount_amount||0),w=Number(t.tax_amount||0),S=Number(t.final_amount||0),C=t.payment?.method||t.payments&&t.payments[0]?.payment_method||t.payments&&t.payments[0]?.method||"CASH";let A=y>0?`<div style="display:flex; justify-content:space-between; gap:6px;"><span>Diskon:</span><span>-${y.toLocaleString("id-ID")}</span></div>`:"",q=w>0?`<div style="display:flex; justify-content:space-between; gap:6px;"><span>Pajak:</span><span>${w.toLocaleString("id-ID")}</span></div>`:"",k="";if(C==="CASH"){const $=t.cashGiven||t.payments&&t.payments[0]?.amount||S||0,U=t.changeDue||0;k=`
+                <div style="display:flex; justify-content:space-between; gap:6px;"><span>Bayar Tunai:</span><span>${Number($).toLocaleString("id-ID")}</span></div>
+                ${U>0?`<div style="display:flex; justify-content:space-between; gap:6px;"><span>Kembalian:</span><span>${Number(U).toLocaleString("id-ID")}</span></div>`:""}
             `}return`
-            <div style="text-align:center; padding-bottom:4px; border-bottom:1px dashed #000;">
-                <h2 style="font-size:12px; font-weight:800; margin:0; text-transform:uppercase; letter-spacing:0.5px;">SOTO LAMONGAN LESTARI</h2>
-                <p style="font-size:10px; font-weight:600; margin:2px 0 0 0;">Cabang Utama</p>
-                <p style="font-size:10px; font-weight:600; margin:1px 0 0 0;">Telp: 0852-1325-4219</p>
+            <div style="text-align:center; padding-bottom:5px; border-bottom:1.5px dashed #000;">
+                <h2 style="font-size:14px; font-weight:900; margin:0; text-transform:uppercase; letter-spacing:0.3px;">SOTO LAMONGAN LESTARI</h2>
+                <p style="font-size:11.5px; font-weight:700; margin:2px 0 0 0;">Cabang Utama</p>
+                <p style="font-size:11.5px; font-weight:700; margin:1px 0 0 0;">Telp: 0852-1325-4219</p>
             </div>
-            <div style="padding:4px 0; border-bottom:1px dashed #000; font-size:10px; line-height:1.3;">
-                <div style="display:flex; justify-content:space-between;"><span>No:</span><strong style="font-weight:700;">${t.order_number||""}</strong></div>
-                <div style="display:flex; justify-content:space-between;"><span>Waktu:</span><span>${a} ${c}</span></div>
-                ${t.customer_name?`<div style="display:flex; justify-content:space-between;"><span>Pelanggan:</span><span>${t.customer_name}</span></div>`:""}
+            <div style="padding:5px 0; border-bottom:1.5px dashed #000; font-size:11px; font-weight:700; line-height:1.35; font-variant-numeric:tabular-nums;">
+                <div style="display:flex; justify-content:space-between; gap:6px;"><span style="white-space:nowrap;">No:</span><strong style="font-weight:800; text-align:right;">${t.order_number||""}</strong></div>
+                <div style="display:flex; justify-content:space-between; gap:6px;"><span style="white-space:nowrap;">Waktu:</span><span style="text-align:right;">${a} ${c}</span></div>
+                ${t.customer_name?`<div style="display:flex; justify-content:space-between; gap:6px;"><span style="white-space:nowrap;">Pelanggan:</span><span style="text-align:right;">${t.customer_name}</span></div>`:""}
             </div>
-            <div style="padding:4px 0; border-bottom:1px dashed #000;">
+            <div style="padding:5px 0; border-bottom:1.5px dashed #000;">
                 ${f}
             </div>
-            <div style="padding:4px 0; border-bottom:1px dashed #000; font-size:10px; line-height:1.35;">
-                <div style="display:flex; justify-content:space-between;"><span>Subtotal:</span><span>${h.toLocaleString("id-ID")}</span></div>
+            <div style="padding:5px 0; border-bottom:1.5px dashed #000; font-size:11.5px; font-weight:700; line-height:1.4; font-variant-numeric:tabular-nums;">
+                <div style="display:flex; justify-content:space-between; gap:6px;"><span>Subtotal:</span><span>${h.toLocaleString("id-ID")}</span></div>
                 ${A}
                 ${q}
-                <div style="display:flex; justify-content:space-between; font-weight:800; font-size:12px; padding-top:3px; border-top:1px dotted #000;">
+                <div style="display:flex; justify-content:space-between; gap:6px; font-weight:900; font-size:13.5px; padding-top:4px; margin-top:2px; border-top:1.5px dotted #000;">
                     <span>TOTAL:</span>
                     <span>Rp${S.toLocaleString("id-ID")}</span>
                 </div>
-                <div style="display:flex; justify-content:space-between; padding-top:2px;"><span>Metode:</span><span>${C}</span></div>
+                <div style="display:flex; justify-content:space-between; gap:6px; padding-top:3px;"><span>Metode:</span><span>${C}</span></div>
                 ${k}
             </div>
-            <div style="text-align:center; padding-top:6px; font-size:10px; line-height:1.3; font-weight:600;">
-                <div style="font-weight:700;">Terima Kasih Atas Kunjungan Anda!</div>
+            <div style="text-align:center; padding-top:6px; font-size:11px; line-height:1.35; font-weight:700;">
+                <div style="font-weight:800;">Terima Kasih Atas Kunjungannya!</div>
                 <div>Rasa Mantap, Harga Bersahabat</div>
-                <div style="font-size:9px; padding-top:3px; color:#555;">SLL Smart POS Cloud</div>
+                <div style="font-size:10px; font-weight:700; padding-top:3px; color:#000000;">SLL Smart POS Cloud</div>
             </div>
         `}printBrowser(t,n=!1){try{let r=t?this.generateReceiptHtml(t,n):"";if(!r){const f=document.getElementById(n?"printable-kot":"printable-receipt");f&&(r=f.innerHTML)}if(!r)return setTimeout(()=>window.print(),150),!0;const s=document.getElementById(n?"printable-kot":"printable-receipt");s&&(s.innerHTML=r);let a=document.getElementById("thermal-print-iframe");a&&a.remove(),a=document.createElement("iframe"),a.id="thermal-print-iframe",a.style.position="fixed",a.style.right="0",a.style.bottom="0",a.style.width="0",a.style.height="0",a.style.border="none",a.style.opacity="0",a.style.zIndex="-9999",document.body.appendChild(a);const c=a.contentWindow.document;return c.open(),c.write(`
                 <!DOCTYPE html>
@@ -110,8 +112,12 @@ Cetak struk akan langsung dikirim ke printer tanpa dialog browser.`),!0}catch(t)
                         }
                         * {
                             box-sizing: border-box !important;
+                            color: #000000 !important;
+                            border-color: #000000 !important;
                             -webkit-print-color-adjust: exact !important;
                             print-color-adjust: exact !important;
+                            -webkit-font-smoothing: none !important;
+                            -webkit-text-stroke: 0.25px #000000 !important;
                             page-break-inside: auto !important;
                             break-inside: auto !important;
                         }
@@ -119,13 +125,13 @@ Cetak struk akan langsung dikirim ke printer tanpa dialog browser.`),!0}catch(t)
                             width: 48mm !important;
                             max-width: 48mm !important;
                             margin: 0 auto !important;
-                            padding: 1mm 1.5mm 6mm 1.5mm !important;
+                            padding: 1mm 1mm 6mm 1mm !important;
                             background: #ffffff !important;
                             color: #000000 !important;
-                            font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important;
-                            font-size: 10px !important;
-                            font-weight: 600 !important;
-                            line-height: 1.25 !important;
+                            font-family: 'Roboto', Arial, Helvetica, sans-serif !important;
+                            font-size: 11.5px !important;
+                            font-weight: 700 !important;
+                            line-height: 1.3 !important;
                             height: auto !important;
                             min-height: 0 !important;
                             max-height: none !important;
@@ -150,7 +156,9 @@ Cetak struk akan langsung dikirim ke printer tanpa dialog browser.`),!0}catch(t)
                     </div>
                 </body>
                 </html>
-            `),c.close(),setTimeout(()=>{try{a.contentWindow.focus(),a.contentWindow.print()}catch(f){console.warn("Iframe print fallback to window.print():",f),window.print()}},250),!0}catch(r){return console.error("Error in printBrowser:",r),setTimeout(()=>window.print(),100),!1}}buildEscPosBytes(t){const n=new TextEncoder,r=27,s=29,a=this.paperWidth===80?42:32;let c=[];c.push(r,64),c.push(r,55,7,160,2),c.push(r,71,1),c.push(r,97,1),c.push(r,69,1),c.push(s,33,17),c.push(...n.encode(`SOTO LAMONGAN LESTARI
+            `),c.close(),setTimeout(()=>{try{a.contentWindow.focus(),a.contentWindow.print()}catch(f){console.warn("Iframe print fallback to window.print():",f),window.print()}},250),!0}catch(r){return console.error("Error in printBrowser:",r),setTimeout(()=>window.print(),100),!1}}buildEscPosBytes(t){const n=new TextEncoder,r=27,s=29,a=this.paperWidth===80?42:32;let c=[];c.push(r,64),c.push(r,97,1),c.push(r,69,1),c.push(s,33,17),a<42?(c.push(...n.encode(`SOTO LAMONGAN
+`)),c.push(...n.encode(`LESTARI
+`))):c.push(...n.encode(`SOTO LAMONGAN LESTARI
 `)),c.push(s,33,0),c.push(r,69,0),c.push(...n.encode(`Cabang Utama
 `)),c.push(...n.encode(`Telp: 0852-1325-4219
 `)),c.push(...n.encode("=".repeat(a)+`
@@ -165,7 +173,7 @@ Cetak struk akan langsung dikirim ke printer tanpa dialog browser.`),!0}catch(t)
 `));const S=(A,q)=>{const k=Math.max(1,a-A.length-q.length);return`${A}${" ".repeat(k)}${q}
 `};c.push(...n.encode(S("Subtotal",Number(t.total_amount||0).toLocaleString("id-ID")))),Number(t.discount_amount||0)>0&&c.push(...n.encode(S("Diskon","-"+Number(t.discount_amount).toLocaleString("id-ID")))),Number(t.tax_amount||0)>0&&c.push(...n.encode(S("Pajak",Number(t.tax_amount).toLocaleString("id-ID")))),c.push(r,69,1),c.push(...n.encode(S("TOTAL","Rp"+Number(t.final_amount||0).toLocaleString("id-ID")))),c.push(r,69,0);const C=t.payment?.method||t.payments&&t.payments[0]?.payment_method||t.payments&&t.payments[0]?.method||"CASH";if(c.push(...n.encode(S("Metode",C))),C==="CASH"){const A=t.cashGiven||t.payments&&t.payments[0]?.amount||t.final_amount||0,q=t.changeDue||0;c.push(...n.encode(S("Bayar Tunai",Number(A).toLocaleString("id-ID")))),Number(q)>0&&c.push(...n.encode(S("Kembalian",Number(q).toLocaleString("id-ID"))))}return c.push(r,97,1),c.push(...n.encode("=".repeat(a)+`
 `)),c.push(...n.encode(`Rasa Mantap, Harga Bersahabat
-`)),c.push(...n.encode(`Terima Kasih Atas Kunjungan Anda!
+`)),c.push(...n.encode(`Terima Kasih Atas Kunjungannya!
 
 
 
